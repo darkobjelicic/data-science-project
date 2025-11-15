@@ -3,55 +3,74 @@ title: "Data Science Project"
 date: "2025-11-15"
 ---
 
-```{r}
+Skup podataka pod nazivom *personality_synthetic_dataset.csv* sadrži informacije koje, na osnovu različitih uzetih parametara, omogućavaju uvid u tip ličnosti ispitanika. Nas cilj je da ispitamo povezanost između odabranih parametara i tipa ličnosti, kako bismo napravili što precizniji model koji može predvideti tip ličnosti ispitanika.
 
-dataset = read.csv("personality_synthetic_dataset.csv", stringsAsFactors = FALSE)
+Ciljna promenljiva, ciju vrednost je model potrebno predvideti na osnovu zavisnih parametara je *personality_type*.
 
-```
+Za potrebe analize podataka koristicemo programski jezik *R* i biblioteke koje on nudi.
 
-
-
-
-```{r}
-
-```
-
-
+Najpre ćemo učitati skup podataka koji je u *.csv* formata.
 
 ```{r}
 
+ds = read.csv("personality_synthetic_dataset.csv", stringsAsFactors = FALSE)
+
 ```
 
-
+Nakon učitavanja skupa podataka, možemo pogledati njegove dimenzije. 
+Vidimo da ovaj skup podataka ima 20 000 redova i 30 kolona što predstavlja dovoljnu količinu podataka za pravljenje modela i njegovo testiranje.
 
 ```{r}
 
+dim(ds)
+
 ```
 
+Pomoću komande *str* možemo pogledati strukturu promenljivih unutar skupa podataka. Možemo primetiti da je promenljiva *personality_type* jedina kategorijska u skupu podataka, a to je ujedno i ciljna promenljiva. 
+Ostale promenljive su kategorijske numericke vrednosti.
+```{r}
+str(ds)
+```
 
-
+Analizom minimalnih i maksimalnih vrednosti numerickih vrednosti, mozemo primetiti da su sve unutar intervala [0, 10].
+Dodatno, primecujemo da nema nedostajucih vrednosti. 
 ```{r}
 
+summary(ds)
+
 ```
+Mozemo proveriti za *personality_type* da li ima prazan string kao vrednost tj. *""* sto je isto nedostajuca vrednost, ali u drugom formatu. To cemo proveriti sledecom komandom:
+```{r}
+table(ds['personality_type'])
+```
+Vidimo da nemamo *""* kao jednu od kategorija i sada sa sigurnoscu mozemo reci da ovaj skup podataka nema nedostajuce vrednosti.
 
+-------------------------------------------------------------
+Mozemo preci na analizu pojedinacnih promenljivih unutar skupa podataka kako bismo se dodatno upoznali sa njim.
 
+Krenimo od ciljne promenljive *personality_type* koja predstavlja tip licnosti.
+Ovo je ujedno i jedina kategorijska promenljiva u našem skupu podataka koja je podeljena u 3 kategorije:
+1.	Introvert – osoba koja uživa u mirnim i samostalnim aktivnostima 
+2.	Extrovert – osoba koja uživa da bude u društu, voli interakciju sa ljudima i društvene aktivnosti
+3.	Ambivert – osoba koja kombinuje oba prethodna tipa tako što se prilagođava situaciji
+
+Pokazimo procentualnu zastupljenost svake kategorije. 
+```{r}
+prop.table(table(ds['personality_type'])) * 100
+```
+Mozemo primetiti da je zastupljenost sva tri tipa licnosti ravnomerna sto je odlicno za dalju obradu seta podataka. 
+Prikazimo ovo i vizuelno pomocu grafika:
 
 ```{r}
+ggplot(data = ds, aes(x = personality_type, fill = personality_type)) + 
+  geom_bar() + 
+  labs(title = "Zastupljenost razlicitih tipova licnosti u skupu podataka",
+         x = "Tip licnosti",
+         y = "Broj pojavljivanja",
+         fill = "Tip licnosti") + 
+  theme_minimal()
 
 ```
-
-
-
-```{r}
-
-```
-
-
-
-```{r}
-
-```
-
 
 
 ```{r}
