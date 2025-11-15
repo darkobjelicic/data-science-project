@@ -72,26 +72,49 @@ ggplot(data = ds, aes(x = personality_type, fill = personality_type)) +
 
 ```
 
+*social_energy* je promenljiva koja predstavlja u kojoj meri osoba crpi energiju iz drustvenih interakcija, gde 0 označava da osoba ne uziva u drustvu, a 10 da osoba veoma uziva u drustvu. 
+Veca vrednost oznacava veću sklonost ka interakciji sa drugima.
+
+Na ovom grafiku mozemo primetiti tendenciju ka normalnoj raspodeli, ali mozemo nacrtati i histogram, kako bismo videli po intervalima koliko ispitanika ima odredjene vrednosti.
 
 ```{r}
-
+ggplot(data = ds, aes(x = social_energy)) + 
+  geom_density(fill = "tomato", alpha = 0.6) + 
+  labs(title = "Graficki prikaz raspodele promenljive 'social_energy'",
+       y = 'Procenat zastupljenosti')
+  theme_minimal()
 ```
 
 
 
 ```{r}
+ggplot(ds, aes(x = social_energy)) +
+  geom_histogram(binwidth = 1, fill = "tomato", color = "black") +
+  labs(title = "Graficki prikaz zastupljenosti intervala promenljive 'social_energy'",
+       y = "Broj ispitanika") +
+  theme_minimal()
 
+```
+
+
+*alone_time_preference* je promenljiva koja predstavlja koliko osoba uziva i voli da provodi vreme sama, pri cemu visa vrednost predstavlja vece uzivanje u tome. 
+Na osnovu grafika ispod, mozemo zakljuciti da i ova promenljiva ima tendenciju ka normalnoj raspodeli. 
+
+```{r}
+ggplot(data = ds, aes(x = alone_time_preference)) + 
+  geom_density(fill = "tomato", alpha = 0.6) + 
+  labs(title = "Graficki prikaz raspodele promenljive 'alone_time_preference'",
+       y = 'Procenat zastupljenosti')
+  theme_minimal()
 ```
 
 
 
 ```{r}
-
-```
-
-
-
-```{r}
-
+ggplot(ds, aes(x = alone_time_preference)) +
+  geom_histogram(binwidth = 1, fill = "tomato", color = "black") +
+  labs(title = "Graficki prikaz zastupljenosti intervala promenljive 'alone_time_preference'",
+       y = "Broj ispitanika") +
+  theme_minimal()
 ```
 
