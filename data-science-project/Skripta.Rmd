@@ -118,3 +118,234 @@ ggplot(ds, aes(x = alone_time_preference)) +
   theme_minimal()
 ```
 
+Odnos ciljane promenljive (personality_type) sa ostalim promenljivama u skupu
+Primenom ANOVA test proveravamo da li se prosecne vrednosti promenljivih razlikuju izmedju tri tipa licnosti (Introvert, Ambivert, Extrovert)
+
+```{r}
+anova_socialEnergy <- aov(social_energy ~ personality_type, data = ds)
+summary(anova_socialEnergy)
+
+```
+Rezultati testa pokazuju da kod promenljive social_energy postoji statisticki znacajna razlika izmedju tipova licnosti(p<0.05)
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=social_energy,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost socijalne energije od tipa licnosti",
+       x="Tip licnosti",
+       y="Socijalna energija")
+```
+Na osnovu boxplot dijagrama uocavamo da:
+  -Extroverti imaju najvise vrednosti socijalne energije
+  -Introverti najmanje
+  -Ambiverti se nalaze izmedju ova dva tipa licnosti
+  
+```{r}
+anova_aloneTimePref <- aov(alone_time_preference ~ personality_type, data = ds)
+summary(anova_aloneTimePref)
+```
+Rezultati pokazuju da se tri tipa licnosti medjusobno razlikuju u stepenu preferiranja vremena provedenog u samoci (p<0.05)
+```{r}
+ggplot(ds,aes(x=personality_type,y=alone_time_preference,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost alone_time_preference od tipa licnosti",
+       x="Tip licnosti",
+       y="Alone time preference")
+```
+
+Sa dijagrama mozemo zakljuciti da:
+  -Introverti najvise preferiraju vreme provedeno sami
+  -Ekstroverti najmanje
+  -Ambiverti se nalaze izmedju ova dva tipa licnosti
+Ocekivano je da ekstroverti imaju najnize vrednosti, sto je u skladu sa njihovom tendencijom ka cescoj socijalnoj interakciji.
+
+```{r}
+anova_talkativeness <- aov(talkativeness ~ personality_type, data = ds)
+summary(anova_talkativeness)
+```
+
+Rezultati testa pokazuju da kod promenljive talkativeness postoji statisticki znacajna razlika izmedju tipova licnosti(p<0.05)
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=talkativeness,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost pricljivosti od tipa licnosti",
+       x="Tip licnosti",
+       y="Pricljivost")
+```
+
+Sa dijagrama mozemo zakljuciti da:
+  -Ekstrovertne osobe najvise vole da komuniciraju
+  -Introvertne najmanje
+  -Ambivertne su izmedju ova tipa licnosti
+
+```{r}
+anova_deepReflection <- aov(deep_reflection ~ personality_type, data = ds)
+summary(anova_deepReflection)
+```
+Rezultati pokazuju da se tri tipa licnosti medjusobno razlikuju u stepenu ucestalosti dubokog razmisljanja (p<0.05)
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=deep_reflection,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost ucestalosti dubokog razmisljanja od tipa licnosti",
+       x="Tip licnosti",
+       y="Ucestalost dubokog razmisljanja")
+```
+Sa dijagrama mozemo zakljuciti da:
+  -Introverti imaju sklonost ka dubokoj analizi o sebi, iskustvima, dogadjajima...
+  -Ekstroverti retko ulaze u dublja razmisljanja
+  -Ambiverti su izmedju
+  
+```{r}
+anova_groupComfort <- aov(group_comfort ~ personality_type, data = ds)
+summary(anova_groupComfort)
+```
+Rezultati pokazuju da se tri tipa licnosti medjusobno razlikuju u stepenu prijatnosti u grupi (p<0.05)
+
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=group_comfort,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost osecaja prijatnosti u grupi od tipa licnosti",
+       x="Tip licnosti",
+       y="Prijatnost u grupi")
+```
+
+Sa dijagrama mozemo zakljuciti da:
+  -Ekstroverti se najprijatnije osecaju u grupi
+  -Introverti najmanje
+  -Ambiverti su izmedju
+  
+```{r}
+anova_partyLiking <- aov(party_liking ~ personality_type, data = ds)
+summary(anova_partyLiking)
+```
+
+Rezultati pokazuju da se tri tipa licnosti medjusobno razlikuju u meri uzivanja u zurkama i drustvenim dogadjajima (p<0.05)
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=party_liking,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost sklonosti zabavama od tipa licnosti",
+       x="Tip licnosti",
+       y="Sklonost ka zabavama")
+```
+Sa dijagrama zakljucujemo da:
+  -Ekstroverti najvise uzivaju u zurkama i drustvenim dogadjajima
+  -Introverti najmanje uzivaju
+  -Ambiverti su izmedju ova 2 tipa licnosti
+  
+```{r}
+anova_Empathy <- aov(empathy ~ personality_type, data = ds)
+summary(anova_Empathy)
+```
+Rezultati testa pokazuju da se tri tipa licnosti medjusobno razlikuju u meri sposobnosti razumevanja osecanja drugih (p<0.05)
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=empathy,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost empatije od tipa licnosti",
+       x="Tip licnosti",
+       y="Empatija")
+```
+
+Sa dijagrama mozemo zakljuciti da:
+    -Introverti najvise razumeju osecanja drugih
+    -Ekstroverti najmanje
+    -Ambiverti su izmedju 
+Mozemo primetiti da razlika ovde nije drasticna.
+
+```{r}
+anova_creativity <- aov(creativity ~ personality_type, data = ds)
+summary(anova_creativity)
+```
+Rezultati testa nam pokazuju da ne postoji statisticki znacajna razlika u kreativnosti izmedju tri tipa licnosti
+
+```{r}
+anova_organization <- aov(organization ~ personality_type, data = ds)
+summary(anova_organization)
+```
+
+Rezultati testa pokazuju da se tri tipa licnosti medjusobno razlikuju u stepenu sklonosti ka organizovanosti, redu i planiranjuobaveza.(p<0.05)
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=organization,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost organizovanosti od tipa licnosti",
+       x="Tip licnosti",
+       y="Organizovanost")
+```
+
+Sa grafika mozemo zaljkuciti da:
+  -Introverti su najorganizovaniji
+  -Ekstroverti najmanje organizovani
+  -Ambiverti su izmedju introverta i ekstroverta
+
+```{r}
+anova_leadership <- aov(leadership ~ personality_type, data = ds)
+summary(anova_leadership)
+```
+Rezultati pokazuju da se tri tipa licnosti medjusobno razlikuju u meri osecaja prijatnosti i samouverenosti u ulozi lidera (p<0.05)
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=leadership,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost osecaja prijatnosti i samouverenosti u ulozi lidera od tipa licnosti",
+       x="Tip licnosti",
+       y="Osecaj prijatnosti i samouverenosti u ulozi lidera")
+```
+Sa dijagrama mozemo zakljuciti da:
+  -Ekstrovertne osobe se osecaju najprijatnije u ulozi lidera
+  -Introvertne osobe se osecaju najmanje prijatno u ulozi lidera
+  -Ambivertne osobe su izmedju ova dva tipa licnosti
+  
+```{r}
+anova_riskTaking <- aov(risk_taking ~ personality_type, data = ds)
+summary(anova_riskTaking)
+```
+
+Rezultati testa pokazuju da se tri tipa licnosti medjusobno razlikuju u stepenu spremnosti preuzimanja rizika (p<0.05)
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=risk_taking,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost sklonosti riziku od tipa licnosti",
+       x="Tip licnosti",
+       y="Spremnost na rizik")
+```
+
+Sa dijagrama zakljucujemo da:
+  -Ekstroverti su najvise spremni da preuzmu rizik
+  -Introverti su najmanje spremni za preuzimanje rizika
+  -Ambiverti su izmedju ova dva tipa
+  
+```{r}
+anova_publicSpeakingComfort <- aov(public_speaking_comfort ~ personality_type, data = ds)
+summary(anova_publicSpeakingComfort)
+```
+Rezultati pokazuju da se tri tipa licnosti medjusobno razlikuju u stepenu osecaja prijatnosti prilikom javnog nastupa (p<0.05)
+
+```{r}
+ggplot(ds,aes(x=personality_type,y=public_speaking_comfort,fill=personality_type)) + 
+  geom_boxplot() + 
+  theme_bw() + 
+  labs(title = "Zavisnost prijatnosti prilikom javnog nasupa od tipa licnosti",
+       x="Tip licnosti",
+       y="Osecaj prijatnosti prilikom javnog nastupa")
+```
+
+Sa dijagrama mozemo zakljuciti da:
+  -Ekstrovertne osobe se najprijatnije osecaju prilikom javnog nastupa
+  -Introvertne osobe se najmanje prijatno osecaju prilikom javnog nastupa
+  -Ambivertne osobe su izmedju ova dva tipa licnosti
