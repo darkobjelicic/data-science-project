@@ -38,6 +38,9 @@ Dodatno, primecujemo da nema nedostajucih vrednosti.
 
 summary(ds)
 
+#Prebacimo ovu promenljivu u faktor promenljivu
+ds$personality_type = factor(ds$personality_type)
+
 ```
 Mozemo proveriti za *personality_type* da li ima prazan string kao vrednost tj. *""* sto je isto nedostajuca vrednost, ali u drugom formatu. To cemo proveriti sledecom komandom:
 ```{r}
@@ -489,6 +492,56 @@ ggplot(ds,aes(x=personality_type,y=stress_handling,fill=personality_type)) +
 ```
 Svi tipovi licnosti se podjednako dobro nose sa stresom, tako da ova promenljiva ne opisuje najbolje razliku u tipovima i nece biti koriscena u kreiranju modela u buducnosti.
 
+---------------
+#Feature Engineering 
+
+##Pretvaranje numerickih u kategorijske promenljive
+
+Promenljive su kontinualnog tipa i pripadaju intervalu [0, 10]. Ovde cemo uvesti vise kategorija (u zavisnosti od intervala).
+Uvodimo 5 kategorija:
+- nisko (0, 2]
+- srednje nisko (2, 4]
+- srednje (4, 6]
+- srednje visoko (6, 8]
+- visoko (8, 10]
+
+```{r}
+num_cols <- sapply(ds, is.numeric)
+
+ds[num_cols] <- lapply(ds[num_cols], function(x) {
+  cut(
+    x,
+    breaks = c(0, 2, 4, 6, 8, 10),
+    labels = c("nisko", "srednje nisko", "srednje", "srednje visoko", "visoko"),
+    right = TRUE,
+    include.lowest = TRUE
+  )
+})
 
 
+```
+Proverimo da li su se primenile kategorijske vrednosti.
+```{r}
+head(ds)
+```
+```{r}
+#Vidimo da su se prebacile u faktor promenljive. 
+str(ds)
+```
 
+##Spajanje promenljivih
+
+Tokom analize pojedinacnih promenljivih i uticaja na ciljnu promenljivu, primeceno je da se neke promenljive odnose na slicne osobine. 
+Na primer **__gadget_usage__** i **__online_social_usage__** mogu se odnositi na istu osobinu ili obe promenljive **__adventurousness__** i **__excitement_seeking__** oznacavaju osobu koja voli adrenalinske situacije. 
+Iz ovih razloga, analiziracemo zavisnost izmedju promenljivih i sta one opisuju i proveriti da li je moguce te vrednosti spojiti u jednu. 
+
+OVO TREBA RAZRADITI DODATNO. OSLONITI SE NA DOMENSKO ZNANJE.
+MOZE SE POGLEDATI I KASNIJE, PREKO REGULARIZACIJE MOZDA.
+
+
+```{r}
+
+```
+
+```{r}
+```
