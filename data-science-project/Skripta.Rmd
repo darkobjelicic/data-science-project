@@ -495,6 +495,84 @@ Svi tipovi licnosti se podjednako dobro nose sa stresom, tako da ova promenljiva
 ---------------
 #Feature Engineering 
 
+##Spajanje promenljivih
+
+Tokom analize pojedinacnih promenljivih i uticaja na ciljnu promenljivu, primeceno je da se neke promenljive odnose na slicne osobine. 
+Na primer **__gadget_usage__** i **__online_social_usage__** mogu se odnositi na istu osobinu ili obe promenljive **__adventurousness__** i **__excitement_seeking__** oznacavaju osobu koja voli adrenalinske situacije. 
+Isto tako mozemo da proverimo za **__social_energy__** i **__group_comfort__** koje se odnose na stepen uzivanja osobe u drustvu-grupi.
+Iz ovih razloga, analiziracemo zavisnost izmedju promenljivih i sta one opisuju i proveriti da li je moguce te vrednosti spojiti u jednu. 
+
+OVO TREBA RAZRADITI DODATNO. OSLONITI SE NA DOMENSKO ZNANJE.
+MOZE SE POGLEDATI I KASNIJE, PREKO REGULARIZACIJE MOZDA.
+
+
+```{r}
+cor(ds$adventurousness,ds$excitement_seeking)
+```
+Mozemo primetiti da je imedju adventurousness i excitement_seeking korelacija umerena ~0.6.
+Dalje cemo analizirati da proverimo da li mozemo da ih spojimo.
+PCA analiza, ili analiza glavnih komponenti, je statisticka tehnika koja se koristi za dobijanje manje dimenzionalnog skupa prediktora
+iz velikog skupa promenljivih.
+```{r}
+pca_advent_exc <- prcomp(ds[,c("adventurousness","excitement_seeking")],scale = TRUE)
+summary(pca_advent_exc)
+```
+PCA analiza za ove 2 promenljive pokazala je da prva glavna komponenta objasnjava ~80% ukupne varijanse,
+sto znaci da obe promenljive u sustini mere istu osobinu. Mozemo ih spojiti u jednu.
+
+```{r}
+cor(ds$gadget_usage,ds$online_social_usage)
+```
+Korelacija izmedju gadget_usage i online_social_usage je veoma losa.
+Uradicemo i PCA analizu da budemo sigurni da ove promenljive treba da ostanu odvojene.
+
+```{r}
+pca_gad_online <- prcomp(ds[,c("gadget_usage","online_social_usage")],scale = TRUE)
+summary(pca_gad_online)
+```
+Prva PCA komponenta objasnjava ~65% varijanse, sto je ispod praga za spajanje. Zato ove 2 promenljive ne predstavljaju jedinstvenu osobinu
+i zadrzacemo ih kao odvojene.
+
+
+```{r}
+cor(ds$social_energy,ds$group_comfort)
+```
+I ovde je korelacija izmedju social_energy i group_comfort umerena 0.6. Sada cemo odraditi PCA analizu.
+
+```{r}
+pca_soc_group <- prcomp(ds[,c("social_energy","group_comfort")],scale = TRUE)
+summary(pca_soc_group)
+```
+PCA analiza za ove 2 promenljive pokazala je da prva glavna komponenta objasnjava 80% ukupne varijanse,
+sto znaci da obe promenljive u sustini mere istu osobinu. Mozemo ih spojiti u jednu.
+
+Spajanje social_energy i group_comfort
+```{r}
+
+ds$social_factor <- rowMeans(ds[, c("social_energy", "group_comfort")])
+
+# Brisemo originalne promenljive
+ds <- subset(ds, select = -c(social_energy, group_comfort))
+
+```
+
+Promenljive social_factor u nasem skupu predstavlja meru socijalne energije i udobnosti u grupi.
+
+Spajanje adventurousness i excitement_seeking
+
+```{r}
+ds$novelty_seeking <- rowMeans(ds[, c("adventurousness", "excitement_seeking")])
+
+ds <- subset(ds, select = -c(adventurousness, excitement_seeking))
+```
+Promenljiva novelty_seeking se odnosi na sklonost osobe ka potrazi za novim iskustvima, avanturama, uzbudjenem, odnosno oznacava osobu
+koja voli adrenalinske situacije. 
+
+```{r}
+head(ds)
+```
+
+
 ##Pretvaranje numerickih u kategorijske promenljive
 
 Promenljive su kontinualnog tipa i pripadaju intervalu [0, 10]. Ovde cemo uvesti vise kategorija (u zavisnosti od intervala).
@@ -527,21 +605,4 @@ head(ds)
 ```{r}
 #Vidimo da su se prebacile u faktor promenljive. 
 str(ds)
-```
-
-##Spajanje promenljivih
-
-Tokom analize pojedinacnih promenljivih i uticaja na ciljnu promenljivu, primeceno je da se neke promenljive odnose na slicne osobine. 
-Na primer **__gadget_usage__** i **__online_social_usage__** mogu se odnositi na istu osobinu ili obe promenljive **__adventurousness__** i **__excitement_seeking__** oznacavaju osobu koja voli adrenalinske situacije. 
-Iz ovih razloga, analiziracemo zavisnost izmedju promenljivih i sta one opisuju i proveriti da li je moguce te vrednosti spojiti u jednu. 
-
-OVO TREBA RAZRADITI DODATNO. OSLONITI SE NA DOMENSKO ZNANJE.
-MOZE SE POGLEDATI I KASNIJE, PREKO REGULARIZACIJE MOZDA.
-
-
-```{r}
-
-```
-
-```{r}
 ```
