@@ -1,0 +1,650 @@
+---
+title: "Global_Mobile_Reviews_Dataset"
+output: pdf_document
+date: "2025-11-22"
+---
+
+#Analiza skupa podataka: Global Mobile Review Dataset
+
+##Opis problema
+
+##Ucitavanje skupa podataka
+Na samom pocetku, kako bismo mogli raditi sa ovim skupom podatka, potrebno je ucitati ga. Skup podataka nalazi se u csv formatu, u fajlu pod nazivom `Mobile_Reviews_Sentiment.csv`.
+```{r}
+reviews = read.csv("Mobile_Reviews_Sentiment.csv", stringsAsFactors = FALSE)
+```
+
+Posto postoji samo jedan fajl, potrebno je videti sa kojom kolicinom podataka raspolazemo kako bismo organizovali podatke sa trening i testni skup. 
+Ovaj skup podataka ima dovoljnu kolicinu podaka - sastoji se od 50 000 redova i 25 kolona. 
+```{r}
+dim(reviews)
+```
+Struktura podataka uglavnom kategorijska. Mozemo videti numericke vrednosti u promenljivima tipa `camera_rating`, `performance_rating` i slicno, ali to su promenljive koje oznacavaju raiting, tako da ce najverovatnije u buducem radu sa skupom podataka biti pretvorene u kategorijske promenljive. Ovo ce se dodatno analizirati. 
+Prave numericke vrednosti se mogu primetiti kod promenljivih `price_usd`, `price_local` i `exchange_rate_to_usd`.
+```{r}
+str(reviews)
+```
+Pogledajmo pregled svih promenljivih u skupu podataka. Ono sto mozemo primetiti da nema NA vrednosti, mada ce za kategorijske biti potrebno proveriti da li je polje prazan String zato sto se i ovo smatra nedostajucom vrednoscu, samo u drugom obliku. 
+```{r}
+summary(reviews)
+```
+#Opis i analiza pojedinacnih promenljivih
+U ovom delu cemo proci kroz skup podataka i posebno opisati i analizirati svaku promenljivu. Na ovaj nacin cemo videti raspodelu vrednosti te promenljive, da li postoje nedostajuce vrednosti i slicno. 
+
+##review_id
+Ova promenljiva predstavlja jedinstveni identifikator tj. ID za svaki review.
+
+Mozemo videti da je minimalna vrednost 1 (prvi review), a maksimalna vrednost 50 000 (poslednji review u skupu podataka). 
+
+```{r}
+summary(reviews$review_id)
+```
+##customer_name
+Ime osobe koja ostavlja review odnosno musterije.
+
+###Nedostajuce vrednosti
+Ovo je kategorijska promenljiva, tako da cemo proveriti da li ima nedostajucih vrednosti. 
+
+Na osnovu rezultata komande ispod mozemo videti da ova kolona nema "skrivene" nedostajuce vrednosti. 
+
+```{r}
+sum(reviews[reviews$customer_name == ""])
+```
+###Pretvaranje u faktorsku promenljivu
+Posto ime nije numericka vrednost - ne mozemo sa njom vrsiti racunice kao sa brojevima, ona se smatra kategorijskom i to nominalnom kategorijskom promenljivom (ne postoji prirodni red za njene vrednosti). Zato cemo ime pretvoriti u faktorsku promenljivu.
+```{r}
+reviews$customer_name = factor(reviews$customer_name)
+```
+
+##age
+Godine su numericka vrednost i predstavljaju broj godina koje osoba koja ostavlja review ima.
+
+###Analiza promenljive
+Minimum godina koje osoba ima u nasem skupu podataka je 18 - sto znaci da su sve ispitane osobe punoletne, dok je maksimalan broj godina 65. 
+```{r}
+summary(reviews$age)
+```
+Na osnovu grafika ispod - koji oznacava raspodelu vrednosti same promenljive, mozemo videti da su najveci broj ocena ostavili mladi od 18 - 22 godine, zatim osobe srednjih godin i najmanje starije osobe - iznad 50 godina. Mozemo reci da je ovo i ocekivano, uzimajuci u obzir da mladje generacije mnogo vise koriste mobilne uredjaje.
+```{r}
+ggplot(reviews, aes(x = age)) + 
+  geom_density(fill = "tomato", alpha = 0.5)
+```
+##brand
+Promenljiva koja oznacava brand, odnosno proizvodjaca samog uredjaja.
+
+###Analiza promenljive
+Ovaj skup podataka razlikuje 7 proizvodjaca mobilnih uredjaja kao sto se moze videti u tabeli ispod. 
+Dodatno, na osnovu vrednosti koja predstavlja broj pojavljivanja proizvodjaca, mozemo potvrditi da je ucestalost gotovo podjednaka. 
+
+```{r}
+table(reviews$brand)
+```
+
+```{r}
+ggplot(reviews, aes(x = brand)) + 
+  geom_bar(fill = "tomato", color = "black") +
+  labs(title = "Graficki prikaz broja pojavljivanja brenda u skupu podataka",
+       x = "Naziv brenda", 
+       y = "Ime pojavljivanja")
+```
+###Pretvaranje promenljive u faktorsku promenljivu
+Posto je ovo kategorijska promenljiva i ima ogranicen broj kategorija, pretvoricemo je u faktorsku promenljivu radi dalje obrade.
+```{r}
+reviews$brand = factor(reviews$brand)
+```
+
+
+##model
+Ova promenljiva oznacava model uredjaja koji je predmet ocenjivanja tj. review-a.
+
+###Analiza promenljive
+Mozemo videti koji modeli su kupovani i ocenjivani u nasem skupu podataka.
+Posto ima relativno veliki broj kategorija, najbolje je njihovu zastupljenost predstaviti koriscenjem grafika.
+```{r}
+table(reviews$model)
+```
+Na osnovu grafika lakse je uociti da se modeli Realme 12 Pro i Realme Narzo 70 najvise pojavljuju.
+```{r}
+ggplot(reviews, aes(x = model)) +
+  geom_bar(fill = "tomato", color = "black") + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(title = "Graficki prikaz zastupljenosti modela u skupu podataka",
+       x = "Ime modela", 
+       y = "Broj pojavljivanja")
+  
+```
+###Pretvaranje u faktorsku promenljivu
+Kao i sa brendom i model cemo pretvoriti u faktorsku promenljivu kako bismo u buducnosti lakse radili sa njom.
+```{r}
+reviews$model = factor(reviews$model)
+```
+
+##price_usd
+Cena uredjaja u americkim dolarima.
+
+###Analiza promenljive
+Ova promenljiva je kontinualna numericka u intervalu od 180 do 1500 dolara - [180, 1500).
+Predstavimo raspodelu cena grafikom.
+```{r}
+summary(reviews$price_usd)
+```
+
+Na grafiku primecujemo da najvise ima cena u raponu od 500 - 700 USD.
+```{r}
+ggplot(reviews, aes(x = price_usd)) + 
+  geom_density(fill = "tomato", alpha = 0.5) +
+  labs(title = "Gravicki prikaz raspodele cena u USD", 
+       x = "Cena u USD",
+       Y = "Ucestalost")
+
+```
+
+##price_local
+Cena uredjaja izrazena u lokalnoj valuti.
+
+###Analiza promenljive
+Mozemo primetiti da je ova promenljiva, iako je logicno da bude numericka, predstavljena kao kategorijska. 
+```{r}
+summary(reviews$price_local)
+```
+Ucitajmo prvih 10 redova, kako bismo ustanovili zbog cega je ovo ovako.
+Mozemo videti da se na pocetku ili na kraju Stringa pojavljuje i oznaka valute. Ukoliko u buducnosti resimo da koristimo ovu promenljivu za analizu ili predikciju, moramo resiti ovaj izazov tj. izvrsiti ekstrakciju brojcanih vrednosti iz String-ova. 
+```{r}
+head(reviews$price_local, 10)
+```
+Posto specijalni karakteri mogu postojati i na pocetku i na kraju Stringa, kreiracemo dve metode. Jedna uklanja specijalne karaktere sa pocetka, a druga sa kraja Stringa.
+```{r}
+remove_from_start <- function(x) {
+  gsub("^[^0-9]*", "", x)
+}
+
+remove_from_end <- function(x) {
+  gsub("[^0-9]*$", "", x) 
+}
+
+```
+
+Sada cemo prvo pozvati funkciju koja brise sa pocetka, pa sa kraja stringa.
+```{r}
+
+reviews$price_local = remove_from_start(reviews$price_local)
+reviews$price_local = remove_from_end(reviews$price_local)
+
+```
+
+I sada cemo te vrednosti pretvoriti u numericke.
+
+```{r}
+reviews$price_local = as.numeric(reviews$price_local)
+```
+
+Proverimo jos jednom da li su uspesno uklonjeni specijalni karakteri pozivanjem prvih 10 redova u skupu podataka. 
+
+```{r}
+head(reviews$price_local, 10)
+```
+
+###Ciscenje znakova valute i pretvaranje price_local u numericku promenljivu
+```{r}
+head(reviews$price_local, 10)
+```
+
+##currency
+Valuta u kojoj je izrazen iznos u price_Local.
+
+###Analiza promenljive
+Ovo je kategorijska promenljiva koja nam ne govori samo o valuti, nego i o zemlji iz koje pojedinac dolazi. Ovaj podatak mozda bude imao znacaja u buducnosti. 
+
+Hajde da preko tabele pogledamo koje su kategorije i ima li nedostajucih vrednosti u vidu praznog stringa.
+```{r}
+table(reviews$currency)
+```
+Mozemo primetiti 8 valuta i 8 zemalja:
+AED — Ujedinjeni Arapski Emirati Dirham
+AUD - Australijski dolar
+BRL - Brazilski real
+CAD - Kanadski dolar
+EUR - Euro
+GBP - Britanska funta
+INR - Indijska ruplja
+USD - Americki dolar
+
+Po brojevima mozemo zakljuciti da se u skupu podataka nalazi podjednak broj ispitanika po zemljama koje koriste ovu valutu, ali hajde da to potvrdimo i grafickim prikazom.
+```{r}
+ggplot(reviews, aes(x = currency)) + 
+  geom_bar(fill = "tomato", color = "black") + 
+  theme_minimal() + 
+  labs(title = "Graficki prikaz broja pojavljivanja lokalnih valuta", 
+       x = "Lokalna valuta", 
+       y = "Broj pojavljivanja")
+```
+###Pretvaranje currency u faktorsku promenljivu
+```{r}
+reviews$currency = factor(reviews$currency)
+```
+
+##exchange_rate_to_usd     
+Ova promenljiva predstavlja kurs lokalne valute izrazene u americkim dolarima - USD.
+
+```{r}
+summary(reviews$exchange_rate_to_usd)
+```
+
+##exchange_rate_to_usd i currency
+Posto je ovo kurs lokalne valute izrazen u americkim dolarima, potrebno je da ima jedinstvenih vrednosti koliko i lokalnih valuta. U ovom slucaju to je 8. 
+Pomocu komande ispod mozemo potvrditi da svaka valuta ima tacno jedan kurs sto doprinosi konzistentnosti u skupu podataka.
+```{r}
+length(unique(reviews$exchange_rate_to_usd))
+```
+Dodatno, potrebno je proveriti koja vrednost odgovara kojoj valuti. Ovo je korisno da bi se uporedila tacnost. 
+Na primer, kurs za prebacivanje USD u USD treba biti 1 tj. da se vrednosti preslikavaju. 
+Hajde da to proverimo sledeceom tablicom. 
+Odlicno, mozemo videti tablicu vrednosti i potvrditi da je istovetna.
+```{r}
+reviews %>%
+  group_by(currency) %>%
+  summarise(exchange_rate = unique(exchange_rate_to_usd))
+```
+
+##rating
+Ovo je kategorijska promenljiva koja oznacava stepen zadovoljstva odnosno samu ocenu uredjaja. Ovo je ujedno i ciljna promenljiva u ovom skupu podataka.
+
+Mozemo zakljuciti da su ocene od 1 do 5.
+```{r}
+table(reviews$rating)
+```
+Na osnovu grafika prikazanog ispod mozemo zakljuciti da najmanje ima uredjaja kojima je osoba prezadovoljna ili u potpunosti nezadovoljna. Najvise osoba uredjaj je ocenilo srednjim ocenama - 3 i 4.
+```{r}
+ggplot(reviews, aes(x = rating)) + 
+  geom_bar(fill = "tomato", fill = "black") + 
+  theme_minimal() + 
+  labs(title = "Graficki prikaz ocena i broja pojavljivanja", 
+       x = "Ocena",
+       y = "Broj pojavljivanja")
+```
+##review_text
+Komentar za sam review o zadovoljstvu uredjajem.
+Ovo je String promenljiva. 
+```{r}
+summary(reviews$review_text)
+```
+#sentiment
+Kategorijska promenljiva koja oznacava da li je u globalu osoba zadovoljna uredjajem ili ne.
+
+Ovo je kategorijska promenljiva sa tri vrednosti: 
+- Negative (osoba nije zadovoljna uredjajem)
+- Neutral (osoba je neutralna po pitanju izjasnjavanja o zadovoljstvu uredjajem)
+- Positive (osoba je zadovoljna uredjajem)
+```{r}
+table(reviews$sentiment)
+```
+Mozemo videti da je najveci broj korisnika zadovoljan izborom uredjaja, sto se slaze sa vrednostima promenljive rating gde je vecina korisnika ocenila uredjaj ocenama od 3 - 5.
+```{r}
+ggplot(reviews, aes(x = sentiment)) + 
+  geom_bar(fill = "tomato", color = "black") +
+  theme_minimal()
+```
+```{r}
+reviews$sentiment = factor(reviews$sentiment)
+```
+
+##country
+Predstavlja zemlju iz koje dolazi osoba koja ocenjuje uredjaj.
+
+Iako se neke valute koriste u vise drzava (na primer EUR) mozemo videti da broj zemalja odgovara broju valuta. 
+Mozemo primetiti da je podjednak broj review-a iz ovih zemalja, sa neznatnim isticanjem Brazila i USA-a.
+```{r}
+table(reviews$country)
+```
+```{r}
+reviews$country = factor(reviews$country)
+```
+
+##language
+Ovo je jos jedna promenljiva vezana za samog korisnika i predstavlja jezik kojim osoba govori.
+
+Najveci broj ispitanika govori engleskim jezikom sto je ocekivano obzirom da imamo cak 4 zemlje (sto je polovina u nasem skupu podataka) gde je engleski jezik zvanicni jezik: UK, USA, Autralija i deo Kanade.
+
+```{r}
+table(reviews$language)
+```
+
+```{r}
+reviews$language = factor(reviews$language)
+```
+
+
+##review_date
+Datum ostavljanja review-a za uredjaj. 
+
+##verified_purchace
+Ova promenljiva nam moze biti zanimljiva u buducnosti zato sto predstavlja True/False tip promenljiva koja objasnjava da li je kupovina uredjaja verifikovana ili ne.
+
+Mozemo videti da je 1/5 ocena sa neverifikovanom ili nepotvrdjenom kupovinom. 
+U nastavku cemo posebnu paznju posvetiti ovoj promenljivoj i razmotriti da li treba uzimati u obzir ocene koje nisu verifikovane. Da li neverifikovane kupovine treba smatrati za outlier-e ukoliko ocena odskace od ostatka za taj uredjaj? 
+Ovo su sve pitanja na koja je potrebno odgovoriti u nastavku. 
+```{r}
+table(reviews$verified_purchase)
+```
+```{r}
+reviews$verified_purchase = factor(reviews$verified_purchase)
+```
+
+Narednih par promenljvih ticu se ocena nekih karakteristika samih uredjaja. 
+U skladu sa tim, u daljem radu cemo videti na koje uredjaje se ocene odnose i da li mozda tu imamo neke outlier-e.
+
+
+##batery_life_rating
+Ocena baterije samog uredjaja. 
+
+Na osnovu tabele ispod mozemo zakljuciti da najveci broj korisnika nije zadovoljan zivotnim ciklusom baterije samog uredjaja.
+```{r}
+table(reviews$battery_life_rating)
+```
+#camera_rating
+Ocena kamere uredjaja od 1 do 5.
+
+Isto kao i prethodni slucaj, mali broj ljudi je zadovoljan kamerom uredjaja koji je kupio.
+
+```{r}
+table(reviews$camera_rating)
+```
+
+```{r}
+ggplot(reviews, aes(x = camera_rating)) + 
+  geom_bar(fill = "tomato", color = "black")
+```
+#performance_rating
+Performanse i brzina prilikom koriscenja uredjaja. 
+
+I ovde je ista situacija, mali broj ljudi je zadovoljan performansama uredjaja.
+```{r}
+table(reviews$performance_rating)
+```
+#design_rating
+Ocena dizajna uredjaja.
+
+Identicna situacija kao i prethodne karakteristike.
+```{r}
+table(reviews$design_rating)
+```
+#display_rating
+Ocena display-a uredjaja.
+
+
+```{r}
+table(reviews$display_rating)
+```
+
+#review_length i word_count
+Ove dve promenljive odnose se na duzinu review_text-a i broju reci koji se u njemu nalazi.
+
+
+#helpful_votes
+
+
+#source
+Ovo je izvor, odnosno mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen jer se review najcesce ostavlja upravo na toj platformi.
+
+Broj kupovina je priblizan za svaku od 5 platformi.
+```{r}
+table(reviews$source)
+```
+
+```{r}
+reviews$source = factor(reviews$source)
+```
+
+#Provera ispravnosti price_usd
+Posto imam promenljive price_local i exchange_rate_to_usd, korisno je pogledati da li su sve vrednosti unutar price_usd odgovarajuce, tj. da li je konverzija ispravno odradjena.
+Ovo je bitno radi dalje obrade podataka za slucaj da odlucimo da gledamo samo ovu promenljivu kao cenu koja je na istoj skali za sve redove.
+
+To cemo uraditi jednostavnim deljenjem price_local i exchange_rate_to_usd i proverom da li vrednost odgovara price_usd.
+
+```{r}
+reviews$custom_price_usd = round(reviews$price_local / reviews$exchange_rate_to_usd, 2)
+```
+
+Prikazimo prvih nekoliko elemenata, kako bismo videli da li je konverzija prosla kako treba.
+```{r}
+reviews[, c("price_usd", "custom_price_usd", "price_local", "currency", "exchange_rate_to_usd")]
+
+```
+Pogledajmo ukupno koliko vrednosti u price_usd je tacno. 
+Vidimo da je cak 48 000 tacno, sto znaci da imamo samo 2 000 vrednosti koje imaju neki problem za konverzijom valuta. 
+Hajde da to analiziramo
+```{r}
+sum(reviews$price_usd == reviews$custom_price_usd)
+```
+Ovde cemo izdvojiti redove gde imamo neslaganja izmedju price_usd i custom_price_usd (vrednosti koju smo izracunali na osnovu price_local i currency).
+```{r}
+unmatching = reviews[reviews$price_usd != reviews$custom_price_usd, ]
+```
+
+Ono sto primecujemo u prvih 10 redova jeste da je razlika u 0.01 sto je verovatno posledica zaokruzivanja vrednosti na dve decimale. Ovo je potrebno potvrditi i za ostatak vrednosti.
+```{r}
+unmatching[, c("price_usd", "custom_price_usd", "price_local", "currency", "exchange_rate_to_usd")]
+```
+
+Na ovaj nacin cemo prebrojati koliko ima redova cija je razlika jedna ili manja od 0.01. 
+Razlog zbog kog smo uveli 1e-8 jeste klasican problem u racunarskim naukama u radu sa decimalnim brojevima. Iako mi ocekujemo da razlika bude 0.01, u realnosti to moze biti i 0.0100001. 
+```{r}
+sum(abs(abs(unmatching$price_usd - unmatching$custom_price_usd) - 0.01) < 1e-8)
+```
+Vrednost koju smo dobili i koja iznosi 1758 cemo uporediti sa vrednoscu ukupnog broja redova gde se ne poklapaju price_usd i custom_price_usd. 
+Vidimo da se broj redova poklapa. 
+Ovo je odlicno, to znaci da su sve lokalne valute ispravno konvertovane u USD. 
+```{r}
+nrow(unmatching) - sum(abs(abs(unmatching$price_usd - unmatching$custom_price_usd) - 0.01) < 1e-8)
+```
+
+------------
+Odnos ciljane promenljive (rating) sa ostalim promenljivama u skupu.
+------------
+
+```{r}
+ggplot(reviews, aes(x = battery_life_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos ratinga i battery_life_rating",
+    x = "Battery life rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Korelacija
+cor(reviews$battery_life_rating, reviews$rating)
+```
+Analiza grafickog prikaza odnosа između rating i battery_life_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu bateriji najcesce daju i veci ukupni rating uredjaja.
+
+```{r}
+ggplot(reviews, aes(x = camera_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i camera_rating",
+    x = "Camera rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+cor(reviews$camera_rating, reviews$rating)
+```
+Graficki prikaz odnosа izmedju rating i camera_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu kameri najcesce daju i veci ukupni rating uredjaja.
+
+```{r}
+ggplot(reviews, aes(x = performance_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i performance_rating",
+    x = "Performance rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+```
+
+
+```{r}
+cor(reviews$performance_rating, reviews$rating)
+```
+Takodje i ovde graficki prikaz odnosа izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu performansama uredjaja najcesce daju i veci ukupni rating uredjaja.
+
+
+```{r}
+ggplot(reviews, aes(x = design_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i design_rating",
+    x = "Design rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+
+```
+
+
+
+```{r}
+cor(reviews$design_rating, reviews$rating)
+```
+Sa grafika mozemo videti da korisnici koji daju vecu ocenu dizajnu uredjaja najcesce daju i veci ukupni rating uredjaja.
+
+
+```{r}
+ggplot(reviews, aes(x = display_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i display_rating",
+    x = "Display rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+```
+
+
+
+```{r}
+cor(reviews$display_rating, reviews$rating)
+```
+Odnos izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu. Korisnici koji daju vecu ocenu displeju uredjaja najcesce daju i veci ukupni rating uredjaja.
+
+
+```{r}
+ggplot(reviews, aes(x = factor(rating), y = price_usd)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(
+    x = "Rating",
+    y = "Cena (USD)",
+    title = "Cena telefona po oceni korisnika"
+  ) +
+  theme_minimal()
+```
+Ukupna ocena koju korisnici daju telefonu nije znacajno povezana sa cenom uredjaja
+
+
+```{r}
+anova_result <- aov(rating ~ brand, data = reviews)
+summary(anova_result)
+```
+
+
+```{r}
+ggplot(reviews, aes(x = brand, y = rating, fill = brand)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Uporedjivanje ratinga po brandu",
+    x = "Brand",
+    y = "Rating"
+  ) +
+  theme(legend.position = "none")
+```
+Ne postoji statisticki znacajna razlika u prosecnom ratingu izmedju razlicitih brendova.
+
+```{r}
+ggplot(reviews, aes(x = sentiment, y = rating)) +
+  geom_boxplot() +
+  labs(title = "Raspodela ratinga po sentimentu",
+       x = "Sentiment",
+       y = "Rating") +
+  theme_minimal()
+```
+
+Sa boxplota mozemo uociti:
+  -recenzije sa Negative sentimentom imaju uglavnom niske ocene (1–2)
+  -recenzije sa Neutral sentimentom imaju ocene uglavnom oko 2–3
+  -recenzije sa Positive sentimentom imaju uglavnom visoke ocene (4–5)
+Logicno je da ce zadovoljni kupci davati vece ocene.
+
+Sada cemo proveriti age, jer starost korisnika moze uticati na ocenu jer razlicite generacije razlicito dozivljavaju telefone.
+
+```{r}
+ggplot(reviews, aes(x = factor(rating), y = age)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(
+    x = "Rating",
+    y = "Age",
+    title = "Starost korisnika u odnosu na rating"
+  ) +
+  theme_minimal()
+```
+```{r}
+cor(reviews$age,reviews$rating)
+```
+Na osnovu korelacije (r = 0.007518163) i grafikona, mozemo zakljuciti da starost korisnika nema znacajan uticaj na ocenu uređaja.
+
+Sada cemo proveriti odnos source i rating. Source predstavlja mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen. Platforma na kojoj je recenzija ostavljena moZe biti indikator i kvaliteta samog uredjaja (npr. prodaja kopija na odredjenim sajtovima).
+
+```{r}
+ggplot(reviews, aes(x = source, y = rating)) +
+  geom_boxplot(width = 0.2, fill = "white") +
+  labs(
+    title = "Uporedjivanje ratinga po platformama (source)",
+    x = "Platforma",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+```
+```{r}
+anova_test <- aov(rating ~ source, reviews)
+summary(anova_test)
+```
+Ne postoji statisticki znacajna razlika u prosecnim ocenama izmedju razlicitih platformi. To znaci da source nije presudan faktor u
+ocenjivanju uredjaja.
+
+Hocemo sada da proverimo verified_purchase u odnosu na rating, zato sto verifikovana kupovina povecava kredibilitet ocene, 
+ljudi koji su stvarno kupili uredjaj obicno daju realnije ocene, manje laznih bot komentara.
+
+
+```{r}
+ggplot(reviews, aes(x = verified_purchase, y = rating, fill = verified_purchase)) +
+  geom_boxplot() +
+  labs(
+    title = "Uporedjivanje ocena po statusu kupovine",
+    x = "Verified Purchase",
+    y = "Rating"
+  ) + theme_minimal()
+```
+```{r}
+t.test(rating ~ verified_purchase, reviews)
+```
+Iako smo pretpostavili da verifikovane recenzije imaju vecu kredibilnost, analiza pokazuje da prosecne ocene ne variraju znacajno u zavisnosti od statusa kupovine.
+
+
+
+
+
+
+
+
+
