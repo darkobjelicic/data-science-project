@@ -439,70 +439,212 @@ Ovo je odlicno, to znaci da su sve lokalne valute ispravno konvertovane u USD.
 nrow(unmatching) - sum(abs(abs(unmatching$price_usd - unmatching$custom_price_usd) - 0.01) < 1e-8)
 ```
 
+------------
+Odnos ciljane promenljive (rating) sa ostalim promenljivama u skupu.
+------------
+
 ```{r}
+ggplot(reviews, aes(x = battery_life_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos ratinga i battery_life_rating",
+    x = "Battery life rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+# Korelacija
+cor(reviews$battery_life_rating, reviews$rating)
+```
+Analiza grafickog prikaza odnosа između rating i battery_life_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu bateriji najcesce daju i veci ukupni rating uredjaja.
+
+```{r}
+ggplot(reviews, aes(x = camera_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i camera_rating",
+    x = "Camera rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
 ```
 
 
 ```{r}
+cor(reviews$camera_rating, reviews$rating)
+```
+Graficki prikaz odnosа izmedju rating i camera_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu kameri najcesce daju i veci ukupni rating uredjaja.
+
+```{r}
+ggplot(reviews, aes(x = performance_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i performance_rating",
+    x = "Performance rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
 ```
 
 
 ```{r}
-
+cor(reviews$performance_rating, reviews$rating)
 ```
+Takodje i ovde graficki prikaz odnosа izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu performansama uredjaja najcesce daju i veci ukupni rating uredjaja.
 
 
 ```{r}
-
-```
-
-```{r}
-
-```
-
-
-```{r}
-
-```
-
-
-
-```{r}
-
-```
-
-
-
-```{r}
-
-```
-
-
-
-```{r}
+ggplot(reviews, aes(x = design_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i design_rating",
+    x = "Design rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
 
 ```
 
 
 
 ```{r}
+cor(reviews$design_rating, reviews$rating)
+```
+Sa grafika mozemo videti da korisnici koji daju vecu ocenu dizajnu uredjaja najcesce daju i veci ukupni rating uredjaja.
 
+
+```{r}
+ggplot(reviews, aes(x = display_rating, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i display_rating",
+    x = "Display rating",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
 ```
 
 
 
 ```{r}
-
+cor(reviews$display_rating, reviews$rating)
 ```
-
+Odnos izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu. Korisnici koji daju vecu ocenu displeju uredjaja najcesce daju i veci ukupni rating uredjaja.
 
 
 ```{r}
+ggplot(reviews, aes(x = factor(rating), y = price_usd)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(
+    x = "Rating",
+    y = "Cena (USD)",
+    title = "Cena telefona po oceni korisnika"
+  ) +
+  theme_minimal()
+```
+Ukupna ocena koju korisnici daju telefonu nije znacajno povezana sa cenom uredjaja
 
+
+```{r}
+anova_result <- aov(rating ~ brand, data = reviews)
+summary(anova_result)
 ```
 
 
 ```{r}
-
+ggplot(reviews, aes(x = brand, y = rating, fill = brand)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Uporedjivanje ratinga po brandu",
+    x = "Brand",
+    y = "Rating"
+  ) +
+  theme(legend.position = "none")
 ```
+Ne postoji statisticki znacajna razlika u prosecnom ratingu izmedju razlicitih brendova.
+
+```{r}
+ggplot(reviews, aes(x = sentiment, y = rating)) +
+  geom_boxplot() +
+  labs(title = "Raspodela ratinga po sentimentu",
+       x = "Sentiment",
+       y = "Rating") +
+  theme_minimal()
+```
+
+Sa boxplota mozemo uociti:
+  -recenzije sa Negative sentimentom imaju uglavnom niske ocene (1–2)
+  -recenzije sa Neutral sentimentom imaju ocene uglavnom oko 2–3
+  -recenzije sa Positive sentimentom imaju uglavnom visoke ocene (4–5)
+Logicno je da ce zadovoljni kupci davati vece ocene.
+
+Sada cemo proveriti age, jer starost korisnika moze uticati na ocenu jer razlicite generacije razlicito dozivljavaju telefone.
+
+```{r}
+ggplot(reviews, aes(x = factor(rating), y = age)) +
+  geom_boxplot(fill = "skyblue") +
+  labs(
+    x = "Rating",
+    y = "Age",
+    title = "Starost korisnika u odnosu na rating"
+  ) +
+  theme_minimal()
+```
+```{r}
+cor(reviews$age,reviews$rating)
+```
+Na osnovu korelacije (r = 0.007518163) i grafikona, mozemo zakljuciti da starost korisnika nema znacajan uticaj na ocenu uređaja.
+
+Sada cemo proveriti odnos source i rating. Source predstavlja mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen. Platforma na kojoj je recenzija ostavljena moZe biti indikator i kvaliteta samog uredjaja (npr. prodaja kopija na odredjenim sajtovima).
+
+```{r}
+ggplot(reviews, aes(x = source, y = rating)) +
+  geom_boxplot(width = 0.2, fill = "white") +
+  labs(
+    title = "Uporedjivanje ratinga po platformama (source)",
+    x = "Platforma",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+```
+```{r}
+anova_test <- aov(rating ~ source, reviews)
+summary(anova_test)
+```
+Ne postoji statisticki znacajna razlika u prosecnim ocenama izmedju razlicitih platformi. To znaci da source nije presudan faktor u
+ocenjivanju uredjaja.
+
+Hocemo sada da proverimo verified_purchase u odnosu na rating, zato sto verifikovana kupovina povecava kredibilitet ocene, 
+ljudi koji su stvarno kupili uredjaj obicno daju realnije ocene, manje laznih bot komentara.
+
+
+```{r}
+ggplot(reviews, aes(x = verified_purchase, y = rating, fill = verified_purchase)) +
+  geom_boxplot() +
+  labs(
+    title = "Uporedjivanje ocena po statusu kupovine",
+    x = "Verified Purchase",
+    y = "Rating"
+  ) + theme_minimal()
+```
+```{r}
+t.test(rating ~ verified_purchase, reviews)
+```
+Iako smo pretpostavili da verifikovane recenzije imaju vecu kredibilnost, analiza pokazuje da prosecne ocene ne variraju znacajno u zavisnosti od statusa kupovine.
+
+
+
+
+
+
+
+
 
