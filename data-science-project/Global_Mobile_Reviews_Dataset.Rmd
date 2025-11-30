@@ -382,7 +382,7 @@ Ove dve promenljive odnose se na duzinu review_text-a i broju reci koji se u nje
 
 
 #helpful_votes
-
+Ova promenljiva nam pokazuje koliko korisnika je ocenilo ovu recenziju kao korisnu.
 
 #source
 Ovo je izvor, odnosno mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen jer se review najcesce ostavlja upravo na toj platformi.
@@ -607,7 +607,7 @@ Sada cemo proveriti odnos source i rating. Source predstavlja mesto gde je komen
 
 ```{r}
 ggplot(reviews, aes(x = source, y = rating)) +
-  geom_boxplot(width = 0.2, fill = "white") +
+  geom_boxplot(width = 0.2, fill = "steelblue") +
   labs(
     title = "Uporedjivanje ratinga po platformama (source)",
     x = "Platforma",
@@ -639,6 +639,343 @@ ggplot(reviews, aes(x = verified_purchase, y = rating, fill = verified_purchase)
 t.test(rating ~ verified_purchase, reviews)
 ```
 Iako smo pretpostavili da verifikovane recenzije imaju vecu kredibilnost, analiza pokazuje da prosecne ocene ne variraju znacajno u zavisnosti od statusa kupovine.
+
+
+
+```{r}
+
+ggplot(reviews, aes(x = helpful_votes, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i helpful_votes",
+    x = "Helpful votes",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r}
+
+cor(reviews$helpful_votes, reviews$rating)
+
+```
+
+Vidimo da je promenljiva helpful_votes znacajna u odredjenoj meri. Uredjaji koji imaju veci broj "korisnih glasova" na recenzijama uglavnom imaju nesto visi rating.
+Znaci popularnije recenzije su cesto one koje su dale dobru ocenu proizvodu.
+
+
+```{r}
+
+reviews$review_date <- as.Date(reviews$review_date)
+
+ggplot(reviews, aes(x = review_date, y = rating)) +
+  geom_jitter(alpha = 0.3) +
+  labs(
+    title = "Veza izmedju datuma recenzije i ocene",
+    x = "Datum recenzije",
+    y = "Rating"
+  ) +
+  theme_minimal()
+
+
+```
+Deluje da datum recenzije nema nikakav znacaj na ukupan rating, pogledacemo i prosecan rating po mesecima.
+
+```{r}
+
+df_month <- reviews %>% 
+  mutate(month = floor_date(review_date, "month")) %>% 
+  group_by(month) %>% 
+  summarise(avg_rating = mean(rating))
+
+ggplot(df_month, aes(x = month, y = avg_rating)) +
+  geom_line(size = 1) +
+  geom_point(color = "steelblue") +
+  labs(
+    title = "Prosečan rating po mesecima",
+    x = "Mesec",
+    y = "Prosečan rating"
+  ) +
+  theme_minimal()
+
+```
+
+Sa grafika mozemo videti da su podaci prilicno nasumicno rasporedjeni, takodje opseg prosecnog rating-a je od 3.00 do 3.20, sto je ne toliko znacajna razlika. 
+Ova promenljiva nam verovatno nece biti znacajna u predvidjanju.
+
+```{r}
+
+ggplot(reviews, aes(x = language, y = rating, fill = language)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Uporedjivanje ratinga po jeziku",
+    x = "Language",
+    y = "Rating"
+  ) +
+  theme(legend.position = "none")
+
+```
+
+Jezik recenzije nema nikakav uticaj na ciljnu promenljivu.
+
+```{r}
+
+ggplot(reviews, aes(x = country, y = rating, fill = country)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Uporedjivanje ratinga po drzavama",
+    x = "Country",
+    y = "Rating"
+  ) +
+  theme(legend.position = "none")
+
+```
+
+Drzava takodje nema nikakav znacaj za ovo predvidjanje.
+
+
+
+------------
+Feature selection
+------------
+
+Iskoristicemo feature importance zasnovan na random forest modelu za selekciju najvaznijih prediktora.
+
+Random forest kombinuje veci broj stabala odlucivana, pogodan je za probleme klasifikacije (za klasifikaciju ne mozemo koristiti LASSO i RIDGE regularizaciju).
+
+```{r}
+
+library(randomForest)
+
+rf_model <- randomForest(
+  x = subset(reviews, select = -rating),
+  y = as.factor(reviews$rating),
+  importance = TRUE
+)
+
+```
+
+
+```{r}
+
+importance(rf_model)
+
+```
+
+Mean Decrease Accuracy nam govori koliko bi se smanjila tacnost modela ako bi se neka promenljiva permutovala (sve ostale promenljive ostanu iste, a ona se izmeni).
+Dakle veci Accuracy nam govori da je promenljiva vaznija za predvidjanje.
+
+Gini indeks meri koliko dobro stablo odlucivanja razdvaja podatke na klase.
+Mean Decrease Gini je mera koliko promenljiva doprinosi cistoci cvorova - dakle veci Mean Decrease Gini znaci da je promenljiva znacajnija (doprinosi vecoj cistoci cvorova).
+
+Mozemo prikazati Mean Decrease Accuracy i Mean Decrease Gini i graficki:
+
+```{r}
+
+varImpPlot(rf_model)
+
+```
+
+Iz tabele i sa grafika mozemo videti gde su Accuracy i Gini veci i odrediti koje promenljive mozemo koristiti za predvidjanje.
+
+Najznacajniji prediktori su nam:
+ - camera_rating
+ - display_rating
+ - batery_life_rating
+ - design_rating
+ - performance_rating
+ - sentiment
+ - eventualno mozemo uzeti u obzir promenljivu helpful_votes, mada je Mean Decrease Gini dosta nizak kod nje
+ 
+ 
+ Sve ovo smo i sami zakljucili kroz "rucno" poredjenje prediktora sa ciljnom promenljivom, ali je uvek bolje iskoristiti neku metodu za feature selection.
+ Tako smo potvrdili nase zakljucivanje i proverili da nam nesto nije promaklo.
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
 
 
 
