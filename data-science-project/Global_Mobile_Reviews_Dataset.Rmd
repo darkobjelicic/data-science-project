@@ -8,6 +8,13 @@ date: "2025-11-22"
 
 ##Opis problema
 
+#Biblioteke potrebne za analizu skupa podataka
+```{r}
+
+library(tidyverse)
+
+```
+
 ##Ucitavanje skupa podataka
 Na samom pocetku, kako bismo mogli raditi sa ovim skupom podatka, potrebno je ucitati ga. Skup podataka nalazi se u csv formatu, u fajlu pod nazivom `Mobile_Reviews_Sentiment.csv`.
 ```{r}
@@ -382,7 +389,7 @@ Ove dve promenljive odnose se na duzinu review_text-a i broju reci koji se u nje
 
 
 #helpful_votes
-
+Ova promenljiva nam pokazuje koliko korisnika je ocenilo ovu recenziju kao korisnu.
 
 #source
 Ovo je izvor, odnosno mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen jer se review najcesce ostavlja upravo na toj platformi.
@@ -442,6 +449,7 @@ nrow(unmatching) - sum(abs(abs(unmatching$price_usd - unmatching$custom_price_us
 ------------
 Odnos ciljane promenljive (rating) sa ostalim promenljivama u skupu.
 ------------
+#battery_life_rating
 
 ```{r}
 ggplot(reviews, aes(x = battery_life_rating, y = rating)) +
@@ -461,6 +469,8 @@ cor(reviews$battery_life_rating, reviews$rating)
 ```
 Analiza grafickog prikaza odnosа između rating i battery_life_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu bateriji najcesce daju i veci ukupni rating uredjaja.
 
+##camera_rating
+
 ```{r}
 ggplot(reviews, aes(x = camera_rating, y = rating)) +
   geom_jitter(alpha = 0.3, color = "steelblue") +
@@ -478,6 +488,8 @@ ggplot(reviews, aes(x = camera_rating, y = rating)) +
 cor(reviews$camera_rating, reviews$rating)
 ```
 Graficki prikaz odnosа izmedju rating i camera_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu kameri najcesce daju i veci ukupni rating uredjaja.
+
+##performance_rating
 
 ```{r}
 ggplot(reviews, aes(x = performance_rating, y = rating)) +
@@ -497,6 +509,7 @@ cor(reviews$performance_rating, reviews$rating)
 ```
 Takodje i ovde graficki prikaz odnosа izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu performansama uredjaja najcesce daju i veci ukupni rating uredjaja.
 
+##design_rating
 
 ```{r}
 ggplot(reviews, aes(x = design_rating, y = rating)) +
@@ -518,6 +531,7 @@ cor(reviews$design_rating, reviews$rating)
 ```
 Sa grafika mozemo videti da korisnici koji daju vecu ocenu dizajnu uredjaja najcesce daju i veci ukupni rating uredjaja.
 
+##display_rating
 
 ```{r}
 ggplot(reviews, aes(x = display_rating, y = rating)) +
@@ -539,6 +553,7 @@ cor(reviews$display_rating, reviews$rating)
 Odnos izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu. Korisnici koji daju vecu ocenu displeju uredjaja najcesce daju i veci ukupni rating uredjaja.
 
 
+#price_usd
 ```{r}
 ggplot(reviews, aes(x = factor(rating), y = price_usd)) +
   geom_boxplot(fill = "skyblue") +
@@ -558,6 +573,7 @@ summary(anova_result)
 ```
 
 
+##brand
 ```{r}
 ggplot(reviews, aes(x = brand, y = rating, fill = brand)) +
   geom_boxplot() +
@@ -570,6 +586,8 @@ ggplot(reviews, aes(x = brand, y = rating, fill = brand)) +
   theme(legend.position = "none")
 ```
 Ne postoji statisticki znacajna razlika u prosecnom ratingu izmedju razlicitih brendova.
+
+##sentiment
 
 ```{r}
 ggplot(reviews, aes(x = sentiment, y = rating)) +
@@ -586,6 +604,134 @@ Sa boxplota mozemo uociti:
   -recenzije sa Positive sentimentom imaju uglavnom visoke ocene (4–5)
 Logicno je da ce zadovoljni kupci davati vece ocene.
 
+Ono sto dodatno mozemo uociti na grafiku jesu potencijalni outlier-i za Negative i Neutral vrednosti promenljive Sentiment. Iako je vecina korisnika koja je za Sentiment dala ocenu Negative ocenila proizvod sa 1 i 2, postoje korisnici koji su ipak ocenili sa 4. Kod neutral je slicna situacija, najcesce ocene su 2 i 3, ali imamo i ocenu 5. 
+
+Na osnovu ovoga, proverimo koliko ima Negative sentiment a ocenu > 3.
+Mozemo videti da ima 62 review sa ovom situacijom.
+
+```{r}
+nrow(reviews %>%
+       filter(sentiment == "Negative", rating > 3))
+```
+Kako bismo bolje videli sta se desava, mozemo videti koji modeli su ocenjeni na ovakav nacin.
+```{r}
+reviews %>% 
+  filter(sentiment == "Negative", rating > 3) %>%
+  group_by(model) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+
+```
+
+Sada je korisno uporediti prosecnu ocenu za rating sa ovim vrednostima da vidimo ima li velikih odstupanja. 
+```{r}
+reviews %>%
+  group_by(model) %>%
+  summarise(avg_rating = mean(rating))
+```
+
+
+Za situaciju kada je Sentiment Neutral imamo nesto vise outlier-a, tj nesto vise korisnika koji su ocenili taj model sa najvisom ocenom.
+```{r}
+nrow(reviews %>%
+       filter(sentiment == "Neutral", rating == 5))
+```
+
+Isto kao i za prethodnu situaciju, pogledajmo kakav je odnos medju samim modelima.
+```{r}
+reviews %>% 
+  filter(sentiment == "Neutral", rating == 5) %>%
+  group_by(model) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+```
+
+##Prosecan rating po modelu
+```{r}
+avg_ratings = reviews %>% 
+  group_by(model) %>%
+  summarise(avg_rating = mean(rating))
+```
+
+##Median-a rating-a po modelu
+```{r}
+meadian_by_model = reviews %>%
+  group_by(model) %>%
+  summarise(median_rating = median(rating))
+```
+
+##Predstavimo outlier-e za situaciju kada je sentiment Negative, a ocena > 3 preko grafika. 
+
+Sada, izdvojimo outlier-e u poseban dataframe.
+```{r}
+outliers_negative = reviews %>% 
+  filter(sentiment == "Negative", rating > 3)
+```
+
+Predstavimo ovo na grafiku
+```{r}
+ggplot() +
+  # prosečan rating po modelu
+  geom_col(data = avg_ratings, aes(x = reorder(model, avg_rating), y = avg_rating), fill = "skyblue") +
+  geom_point(data = outliers_negative, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
+  coord_flip() + 
+  labs(title= "Prosecan rating po modelu i outlier-i", 
+       x = "Model uredjaja", 
+       y = "Rating")
+```
+
+Posto prosecna ocena nije nije uvek merodavna, mozemo graficki predstaviti i odnos median-e i outlier-a
+
+
+Iz ovog grafika ne mozemo mnogo procitati. Vecina ispitanika svaki model ocenjuje srednjom ocenom. 
+
+```{r}
+ggplot() +
+  # prosečan rating po modelu
+  geom_col(data = meadian_by_model, aes(x = reorder(model, median_rating), y = median_rating), fill = "skyblue") +
+  geom_point(data = outliers_negative, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
+  coord_flip() + 
+  labs(title= "Prosecan rating po modelu i outlier-i", 
+       x = "Model uredjaja", 
+       y = "Rating")
+```
+
+#Neutral sentiment i outlier-i
+
+
+```{r}
+outliers_neutral = reviews %>% 
+  filter(sentiment == "Neutral", rating == 5)
+```
+
+Ovde imamo vise odstupanja od prosecnog rating-a u odnosu na Negative.
+```{r}
+ggplot() +
+  # prosečan rating po modelu
+  geom_col(data = avg_ratings, aes(x = reorder(model, avg_rating), y = avg_rating), fill = "skyblue") +
+  geom_point(data = outliers_neutral, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
+  coord_flip() + 
+  labs(title= "Prosecan rating po modelu i outlier-i", 
+       x = "Model uredjaja", 
+       y = "Rating")
+```
+
+```{r}
+ggplot() +
+  # prosečan rating po modelu
+  geom_col(data = meadian_by_model, aes(x = reorder(model, median_rating), y = median_rating), fill = "skyblue") +
+  geom_point(data = outliers_neutral, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
+  coord_flip() + 
+  labs(title= "Prosecan rating po modelu i outlier-i", 
+       x = "Model uredjaja", 
+       y = "Rating")
+```
+
+Na osnovu grafika i analize, vidimo da postoje jasni outlier-e u odnosu sentiment-rating. 
+Za sada cemo biti svesni ovih outlier-a i ispratiti kako oni u buducnosti uticu na model zato sto mozda neka druga vrednost tj. prediktor pokuce ocenu pojedinca.
+
+
+##age 
 Sada cemo proveriti age, jer starost korisnika moze uticati na ocenu jer razlicite generacije razlicito dozivljavaju telefone.
 
 ```{r}
@@ -602,12 +748,37 @@ ggplot(reviews, aes(x = factor(rating), y = age)) +
 cor(reviews$age,reviews$rating)
 ```
 Na osnovu korelacije (r = 0.007518163) i grafikona, mozemo zakljuciti da starost korisnika nema znacajan uticaj na ocenu uređaja.
+Medjutim, posto je ovo numericka vrednost, mozemo godine svrstati u tri kategorije - Mladi, Srednje godine i Starija dob. 
+
+```{r}
+reviews = reviews %>%
+  mutate(age_category = case_when(
+    age >= 18 & age < 30 ~ "Young age",
+    age >= 30 & age <= 55 ~ "Middle age",
+    age > 55 ~ "Senior age"
+  ))
+```
+
+
+```{r}
+reviews$age_category = factor(reviews$age_category)
+```
+
+Sada cemo uporediti ciljnu promenljivu rating sa age_category.
+
+Vrednosti koje su prikazane na prethodnom grafikonu nisu outlier-i to je starija populacija (velika je razlika u godinama.)
+
+```{r}
+table(reviews$age_category, reviews$rating)
+```
 
 Sada cemo proveriti odnos source i rating. Source predstavlja mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen. Platforma na kojoj je recenzija ostavljena moZe biti indikator i kvaliteta samog uredjaja (npr. prodaja kopija na odredjenim sajtovima).
 
+##source
+
 ```{r}
 ggplot(reviews, aes(x = source, y = rating)) +
-  geom_boxplot(width = 0.2, fill = "white") +
+  geom_boxplot(width = 0.2, fill = "steelblue") +
   labs(
     title = "Uporedjivanje ratinga po platformama (source)",
     x = "Platforma",
@@ -625,6 +796,7 @@ ocenjivanju uredjaja.
 Hocemo sada da proverimo verified_purchase u odnosu na rating, zato sto verifikovana kupovina povecava kredibilitet ocene, 
 ljudi koji su stvarno kupili uredjaj obicno daju realnije ocene, manje laznih bot komentara.
 
+#verified_purchase
 
 ```{r}
 ggplot(reviews, aes(x = verified_purchase, y = rating, fill = verified_purchase)) +
@@ -639,6 +811,343 @@ ggplot(reviews, aes(x = verified_purchase, y = rating, fill = verified_purchase)
 t.test(rating ~ verified_purchase, reviews)
 ```
 Iako smo pretpostavili da verifikovane recenzije imaju vecu kredibilnost, analiza pokazuje da prosecne ocene ne variraju znacajno u zavisnosti od statusa kupovine.
+
+#helpful_votes
+
+```{r}
+
+ggplot(reviews, aes(x = helpful_votes, y = rating)) +
+  geom_jitter(alpha = 0.3, color = "steelblue") +
+  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+  labs(
+    title = "Odnos rating i helpful_votes",
+    x = "Helpful votes",
+    y = "Ukupni rating"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r}
+
+cor(reviews$helpful_votes, reviews$rating)
+
+```
+
+Vidimo da je promenljiva helpful_votes znacajna u odredjenoj meri. Uredjaji koji imaju veci broj "korisnih glasova" na recenzijama uglavnom imaju nesto visi rating.
+Znaci popularnije recenzije su cesto one koje su dale dobru ocenu proizvodu.
+
+
+```{r}
+
+reviews$review_date <- as.Date(reviews$review_date)
+
+ggplot(reviews, aes(x = review_date, y = rating)) +
+  geom_jitter(alpha = 0.3) +
+  labs(
+    title = "Veza izmedju datuma recenzije i ocene",
+    x = "Datum recenzije",
+    y = "Rating"
+  ) +
+  theme_minimal()
+
+
+```
+Deluje da datum recenzije nema nikakav znacaj na ukupan rating, pogledacemo i prosecan rating po mesecima.
+
+```{r}
+
+df_month <- reviews %>% 
+  mutate(month = floor_date(review_date, "month")) %>% 
+  group_by(month) %>% 
+  summarise(avg_rating = mean(rating))
+
+ggplot(df_month, aes(x = month, y = avg_rating)) +
+  geom_line(size = 1) +
+  geom_point(color = "steelblue") +
+  labs(
+    title = "Prosečan rating po mesecima",
+    x = "Mesec",
+    y = "Prosečan rating"
+  ) +
+  theme_minimal()
+
+```
+
+Sa grafika mozemo videti da su podaci prilicno nasumicno rasporedjeni, takodje opseg prosecnog rating-a je od 3.00 do 3.20, sto je ne toliko znacajna razlika. 
+Ova promenljiva nam verovatno nece biti znacajna u predvidjanju.
+
+```{r}
+
+ggplot(reviews, aes(x = language, y = rating, fill = language)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Uporedjivanje ratinga po jeziku",
+    x = "Language",
+    y = "Rating"
+  ) +
+  theme(legend.position = "none")
+
+```
+
+Jezik recenzije nema nikakav uticaj na ciljnu promenljivu.
+
+```{r}
+
+ggplot(reviews, aes(x = country, y = rating, fill = country)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    title = "Uporedjivanje ratinga po drzavama",
+    x = "Country",
+    y = "Rating"
+  ) +
+  theme(legend.position = "none")
+
+```
+
+Drzava takodje nema nikakav znacaj za ovo predvidjanje.
+
+
+
+------------
+Feature selection
+------------
+
+Iskoristicemo feature importance zasnovan na random forest modelu za selekciju najvaznijih prediktora.
+
+Random forest kombinuje veci broj stabala odlucivana, pogodan je za probleme klasifikacije (za klasifikaciju ne mozemo koristiti LASSO i RIDGE regularizaciju).
+
+```{r}
+
+library(randomForest)
+
+rf_model <- randomForest(
+  x = subset(reviews, select = -rating),
+  y = as.factor(reviews$rating),
+  importance = TRUE
+)
+
+```
+
+
+```{r}
+
+importance(rf_model)
+
+```
+
+Mean Decrease Accuracy nam govori koliko bi se smanjila tacnost modela ako bi se neka promenljiva permutovala (sve ostale promenljive ostanu iste, a ona se izmeni).
+Dakle veci Accuracy nam govori da je promenljiva vaznija za predvidjanje.
+
+Gini indeks meri koliko dobro stablo odlucivanja razdvaja podatke na klase.
+Mean Decrease Gini je mera koliko promenljiva doprinosi cistoci cvorova - dakle veci Mean Decrease Gini znaci da je promenljiva znacajnija (doprinosi vecoj cistoci cvorova).
+
+Mozemo prikazati Mean Decrease Accuracy i Mean Decrease Gini i graficki:
+
+```{r}
+
+varImpPlot(rf_model)
+
+```
+
+Iz tabele i sa grafika mozemo videti gde su Accuracy i Gini veci i odrediti koje promenljive mozemo koristiti za predvidjanje.
+
+Najznacajniji prediktori su nam:
+ - camera_rating
+ - display_rating
+ - batery_life_rating
+ - design_rating
+ - performance_rating
+ - sentiment
+ - eventualno mozemo uzeti u obzir promenljivu helpful_votes, mada je Mean Decrease Gini dosta nizak kod nje
+ 
+ 
+ Sve ovo smo i sami zakljucili kroz "rucno" poredjenje prediktora sa ciljnom promenljivom, ali je uvek bolje iskoristiti neku metodu za feature selection.
+ Tako smo potvrdili nase zakljucivanje i proverili da nam nesto nije promaklo.
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+
+
+
+```
 
 
 
