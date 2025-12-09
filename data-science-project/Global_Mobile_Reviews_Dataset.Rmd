@@ -970,66 +970,121 @@ Najznacajniji prediktori su nam:
 
 ```{r}
 
+reviews_important_vars = reviews[, c("camera_rating", "display_rating", "battery_life_rating", "design_rating", "performance_rating", "sentiment", "helpful_votes", "rating")]
 
+names(reviews_important_vars)
+
+```
+
+Napravili smo novi skup podataka koji sadrzi samo one kolone koje su nam bitne za predikciju nase ciljne promenljive i samu ciljnu promenljivu.
+
+Sada cemo ovaj skup podeliti na trening, test i validacioni skup.
+
+```{r}
+
+set.seed(123)
+
+index_train = sample(1: nrow(reviews_important_vars), size = 0.6 * nrow(reviews_important_vars))
+
+train = reviews_important_vars[index_train, ]
+
+```
+
+Uzeli smo 60% podataka za trening skup. Ostatak cemo podeliti na test i validation skup (oba po 20%)
+
+
+```{r}
+
+remaining = reviews_important_vars[-index_train, ]
+index_test = sample(1:nrow(remaining), size = 0.5 * nrow(remaining))
+
+test = remaining[index_test, ]
+validation = remaining[-index_test, ]
+
+```
+
+Podelili smo i ostatak podataka na validacioni i testni skup, provericemo dimenzije svakog skupa.
+
+```{r}
+
+dim(train)
 
 ```
 
 
 ```{r}
 
-
-
-```
-
-
-```{r}
-
-
+dim(test)
 
 ```
 
 
 ```{r}
 
-
+dim(validation)
 
 ```
+
+Trening skup ima 30000 opservacija sto je sasvim dovoljno. Validacioni i testni skup imaju po 10000 opservacija tako da cemo moci lepo da ispitamo da li nas model radi dobru procenu.
+
+```{r}
+
+train$rating = as.factor(train$rating)
+validation$rating = as.factor(validation$rating)
+test$rating = as.factor(test$rating)
+
+```
+
+Ciljna promenljiva je trenutno tipa int, a nama je potrebna klasifikacija u 5 nivoa, zato pretvaramo rating u factor promenljivu.
+
+Takodje cemo promenljivu sentiment prebaciti u numericku, neki modeli rade samo sa numerickim vrednostima, a sentiment ima samo 3 nivoa (Negative, Neutral i Positive).
+
+```{r}
+
+train$sentiment = as.numeric(factor(train$sentiment, levels = c("Negative", "Neutral", "Positive")))
+validation$sentiment = as.numeric(factor(validation$sentiment, levels = c("Negative", "Neutral", "Positive")))
+test$sentiment = as.numeric(factor(test$sentiment, levels = c("Negative", "Neutral", "Positive")))
+
+str(train)
+
+```
+
+Struktura skupa podataka nam sada odgovara.
+Idemo da napravimo vise modela.
+
+#K-Nearest Neighbors
+
+```{r}
+
+library(class)
+library(caret)
+
+knn_model = knn(train = scale(train[, -8]), test = scale(test[, -8]), cl = train$rating, k = 7)
+
+confusionMatrix(knn_model, validation$rating)
+
+```
+
+Na prvi pogled vidimo da model nije bas najbolji (kada uporedimo Prediction i Reference u tabeli).
+Prediction nam govori sta je model predvideo a Reference sta je stvarna vrednost u nasem skupu.
+Accuracy (0.22) znaci da je samo 22% predikcija tacno, sto je veoma lose.
+Kappa (0.0052) - skoro 0 - model prakticno nije bolji od nasumicnog predvidjanja.
+Sensitivity ( TP/(TP+FN) ) - u koliko procenata model tacno predvidi klasu - vidimo da je ovde raspon od 0.13 do 0.29 sto je veoma lose.
+Specificity ( TN/(TN+FP) ) - koliko model tacno predvidi da nesto nije ta klasa - ovde moze da nam se ucini da je Specificity solidan, ali treba uzeti u obzir da imamo 5 klasa tako da je moguce da je model nasumicno birao neku od preostale 4 klase.
+
+
+Model je jako los, mozemo da pokusamo sa vecim brojem suseda.
 
 
 ```{r}
 
+knn_model2 = knn(train = scale(train[, -8]), test = scale(test[, -8]), cl = train$rating, k = 25)
 
-
-```
-
-
-```{r}
-
-
+confusionMatrix(knn_model2, validation$rating)
 
 ```
 
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
+Pokusali smo sa cak 25 suseda, ali model je i dalje veoma los, tako da cemo morati da pokusamo sa necim kompleksnijim.
 
 ```{r}
 
