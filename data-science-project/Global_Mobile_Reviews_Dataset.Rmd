@@ -8,6 +8,13 @@ date: "2025-11-22"
 
 ##Opis problema
 
+#Biblioteke potrebne za analizu skupa podataka
+```{r}
+
+library(tidyverse)
+
+```
+
 ##Ucitavanje skupa podataka
 Na samom pocetku, kako bismo mogli raditi sa ovim skupom podatka, potrebno je ucitati ga. Skup podataka nalazi se u csv formatu, u fajlu pod nazivom `Mobile_Reviews_Sentiment.csv`.
 ```{r}
@@ -442,6 +449,7 @@ nrow(unmatching) - sum(abs(abs(unmatching$price_usd - unmatching$custom_price_us
 ------------
 Odnos ciljane promenljive (rating) sa ostalim promenljivama u skupu.
 ------------
+#battery_life_rating
 
 ```{r}
 ggplot(reviews, aes(x = battery_life_rating, y = rating)) +
@@ -461,6 +469,8 @@ cor(reviews$battery_life_rating, reviews$rating)
 ```
 Analiza grafickog prikaza odnosа između rating i battery_life_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu bateriji najcesce daju i veci ukupni rating uredjaja.
 
+##camera_rating
+
 ```{r}
 ggplot(reviews, aes(x = camera_rating, y = rating)) +
   geom_jitter(alpha = 0.3, color = "steelblue") +
@@ -478,6 +488,8 @@ ggplot(reviews, aes(x = camera_rating, y = rating)) +
 cor(reviews$camera_rating, reviews$rating)
 ```
 Graficki prikaz odnosа izmedju rating i camera_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu kameri najcesce daju i veci ukupni rating uredjaja.
+
+##performance_rating
 
 ```{r}
 ggplot(reviews, aes(x = performance_rating, y = rating)) +
@@ -497,6 +509,7 @@ cor(reviews$performance_rating, reviews$rating)
 ```
 Takodje i ovde graficki prikaz odnosа izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu performansama uredjaja najcesce daju i veci ukupni rating uredjaja.
 
+##design_rating
 
 ```{r}
 ggplot(reviews, aes(x = design_rating, y = rating)) +
@@ -518,6 +531,7 @@ cor(reviews$design_rating, reviews$rating)
 ```
 Sa grafika mozemo videti da korisnici koji daju vecu ocenu dizajnu uredjaja najcesce daju i veci ukupni rating uredjaja.
 
+##display_rating
 
 ```{r}
 ggplot(reviews, aes(x = display_rating, y = rating)) +
@@ -539,6 +553,7 @@ cor(reviews$display_rating, reviews$rating)
 Odnos izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu. Korisnici koji daju vecu ocenu displeju uredjaja najcesce daju i veci ukupni rating uredjaja.
 
 
+#price_usd
 ```{r}
 ggplot(reviews, aes(x = factor(rating), y = price_usd)) +
   geom_boxplot(fill = "skyblue") +
@@ -558,6 +573,7 @@ summary(anova_result)
 ```
 
 
+##brand
 ```{r}
 ggplot(reviews, aes(x = brand, y = rating, fill = brand)) +
   geom_boxplot() +
@@ -570,6 +586,8 @@ ggplot(reviews, aes(x = brand, y = rating, fill = brand)) +
   theme(legend.position = "none")
 ```
 Ne postoji statisticki znacajna razlika u prosecnom ratingu izmedju razlicitih brendova.
+
+##sentiment
 
 ```{r}
 ggplot(reviews, aes(x = sentiment, y = rating)) +
@@ -586,6 +604,134 @@ Sa boxplota mozemo uociti:
   -recenzije sa Positive sentimentom imaju uglavnom visoke ocene (4–5)
 Logicno je da ce zadovoljni kupci davati vece ocene.
 
+Ono sto dodatno mozemo uociti na grafiku jesu potencijalni outlier-i za Negative i Neutral vrednosti promenljive Sentiment. Iako je vecina korisnika koja je za Sentiment dala ocenu Negative ocenila proizvod sa 1 i 2, postoje korisnici koji su ipak ocenili sa 4. Kod neutral je slicna situacija, najcesce ocene su 2 i 3, ali imamo i ocenu 5. 
+
+Na osnovu ovoga, proverimo koliko ima Negative sentiment a ocenu > 3.
+Mozemo videti da ima 62 review sa ovom situacijom.
+
+```{r}
+nrow(reviews %>%
+       filter(sentiment == "Negative", rating > 3))
+```
+Kako bismo bolje videli sta se desava, mozemo videti koji modeli su ocenjeni na ovakav nacin.
+```{r}
+reviews %>% 
+  filter(sentiment == "Negative", rating > 3) %>%
+  group_by(model) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+
+```
+
+Sada je korisno uporediti prosecnu ocenu za rating sa ovim vrednostima da vidimo ima li velikih odstupanja. 
+```{r}
+reviews %>%
+  group_by(model) %>%
+  summarise(avg_rating = mean(rating))
+```
+
+
+Za situaciju kada je Sentiment Neutral imamo nesto vise outlier-a, tj nesto vise korisnika koji su ocenili taj model sa najvisom ocenom.
+```{r}
+nrow(reviews %>%
+       filter(sentiment == "Neutral", rating == 5))
+```
+
+Isto kao i za prethodnu situaciju, pogledajmo kakav je odnos medju samim modelima.
+```{r}
+reviews %>% 
+  filter(sentiment == "Neutral", rating == 5) %>%
+  group_by(model) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+```
+
+##Prosecan rating po modelu
+```{r}
+avg_ratings = reviews %>% 
+  group_by(model) %>%
+  summarise(avg_rating = mean(rating))
+```
+
+##Median-a rating-a po modelu
+```{r}
+meadian_by_model = reviews %>%
+  group_by(model) %>%
+  summarise(median_rating = median(rating))
+```
+
+##Predstavimo outlier-e za situaciju kada je sentiment Negative, a ocena > 3 preko grafika. 
+
+Sada, izdvojimo outlier-e u poseban dataframe.
+```{r}
+outliers_negative = reviews %>% 
+  filter(sentiment == "Negative", rating > 3)
+```
+
+Predstavimo ovo na grafiku
+```{r}
+ggplot() +
+  # prosečan rating po modelu
+  geom_col(data = avg_ratings, aes(x = reorder(model, avg_rating), y = avg_rating), fill = "skyblue") +
+  geom_point(data = outliers_negative, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
+  coord_flip() + 
+  labs(title= "Prosecan rating po modelu i outlier-i", 
+       x = "Model uredjaja", 
+       y = "Rating")
+```
+
+Posto prosecna ocena nije nije uvek merodavna, mozemo graficki predstaviti i odnos median-e i outlier-a
+
+
+Iz ovog grafika ne mozemo mnogo procitati. Vecina ispitanika svaki model ocenjuje srednjom ocenom. 
+
+```{r}
+ggplot() +
+  # prosečan rating po modelu
+  geom_col(data = meadian_by_model, aes(x = reorder(model, median_rating), y = median_rating), fill = "skyblue") +
+  geom_point(data = outliers_negative, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
+  coord_flip() + 
+  labs(title= "Prosecan rating po modelu i outlier-i", 
+       x = "Model uredjaja", 
+       y = "Rating")
+```
+
+#Neutral sentiment i outlier-i
+
+
+```{r}
+outliers_neutral = reviews %>% 
+  filter(sentiment == "Neutral", rating == 5)
+```
+
+Ovde imamo vise odstupanja od prosecnog rating-a u odnosu na Negative.
+```{r}
+ggplot() +
+  # prosečan rating po modelu
+  geom_col(data = avg_ratings, aes(x = reorder(model, avg_rating), y = avg_rating), fill = "skyblue") +
+  geom_point(data = outliers_neutral, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
+  coord_flip() + 
+  labs(title= "Prosecan rating po modelu i outlier-i", 
+       x = "Model uredjaja", 
+       y = "Rating")
+```
+
+```{r}
+ggplot() +
+  # prosečan rating po modelu
+  geom_col(data = meadian_by_model, aes(x = reorder(model, median_rating), y = median_rating), fill = "skyblue") +
+  geom_point(data = outliers_neutral, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
+  coord_flip() + 
+  labs(title= "Prosecan rating po modelu i outlier-i", 
+       x = "Model uredjaja", 
+       y = "Rating")
+```
+
+Na osnovu grafika i analize, vidimo da postoje jasni outlier-e u odnosu sentiment-rating. 
+Za sada cemo biti svesni ovih outlier-a i ispratiti kako oni u buducnosti uticu na model zato sto mozda neka druga vrednost tj. prediktor pokuce ocenu pojedinca.
+
+
+##age 
 Sada cemo proveriti age, jer starost korisnika moze uticati na ocenu jer razlicite generacije razlicito dozivljavaju telefone.
 
 ```{r}
@@ -602,8 +748,33 @@ ggplot(reviews, aes(x = factor(rating), y = age)) +
 cor(reviews$age,reviews$rating)
 ```
 Na osnovu korelacije (r = 0.007518163) i grafikona, mozemo zakljuciti da starost korisnika nema znacajan uticaj na ocenu uređaja.
+Medjutim, posto je ovo numericka vrednost, mozemo godine svrstati u tri kategorije - Mladi, Srednje godine i Starija dob. 
+
+```{r}
+reviews = reviews %>%
+  mutate(age_category = case_when(
+    age >= 18 & age < 30 ~ "Young age",
+    age >= 30 & age <= 55 ~ "Middle age",
+    age > 55 ~ "Senior age"
+  ))
+```
+
+
+```{r}
+reviews$age_category = factor(reviews$age_category)
+```
+
+Sada cemo uporediti ciljnu promenljivu rating sa age_category.
+
+Vrednosti koje su prikazane na prethodnom grafikonu nisu outlier-i to je starija populacija (velika je razlika u godinama.)
+
+```{r}
+table(reviews$age_category, reviews$rating)
+```
 
 Sada cemo proveriti odnos source i rating. Source predstavlja mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen. Platforma na kojoj je recenzija ostavljena moZe biti indikator i kvaliteta samog uredjaja (npr. prodaja kopija na odredjenim sajtovima).
+
+##source
 
 ```{r}
 ggplot(reviews, aes(x = source, y = rating)) +
@@ -625,6 +796,7 @@ ocenjivanju uredjaja.
 Hocemo sada da proverimo verified_purchase u odnosu na rating, zato sto verifikovana kupovina povecava kredibilitet ocene, 
 ljudi koji su stvarno kupili uredjaj obicno daju realnije ocene, manje laznih bot komentara.
 
+#verified_purchase
 
 ```{r}
 ggplot(reviews, aes(x = verified_purchase, y = rating, fill = verified_purchase)) +
@@ -640,7 +812,7 @@ t.test(rating ~ verified_purchase, reviews)
 ```
 Iako smo pretpostavili da verifikovane recenzije imaju vecu kredibilnost, analiza pokazuje da prosecne ocene ne variraju znacajno u zavisnosti od statusa kupovine.
 
-
+#helpful_votes
 
 ```{r}
 
@@ -798,122 +970,247 @@ Najznacajniji prediktori su nam:
 
 ```{r}
 
+reviews_important_vars = reviews[, c("camera_rating", "display_rating", "battery_life_rating", "design_rating", "performance_rating", "sentiment", "helpful_votes", "rating")]
 
+names(reviews_important_vars)
+
+```
+
+Napravili smo novi skup podataka koji sadrzi samo one kolone koje su nam bitne za predikciju nase ciljne promenljive i samu ciljnu promenljivu.
+
+Sada cemo ovaj skup podeliti na trening, test i validacioni skup.
+
+```{r}
+
+set.seed(123)
+
+index_train = sample(1: nrow(reviews_important_vars), size = 0.6 * nrow(reviews_important_vars))
+
+train = reviews_important_vars[index_train, ]
+
+```
+
+Uzeli smo 60% podataka za trening skup. Ostatak cemo podeliti na test i validation skup (oba po 20%)
+
+
+```{r}
+
+remaining = reviews_important_vars[-index_train, ]
+index_test = sample(1:nrow(remaining), size = 0.5 * nrow(remaining))
+
+test = remaining[index_test, ]
+validation = remaining[-index_test, ]
+
+```
+
+Podelili smo i ostatak podataka na validacioni i testni skup, provericemo dimenzije svakog skupa.
+
+```{r}
+
+dim(train)
 
 ```
 
 
 ```{r}
 
-
-
-```
-
-
-```{r}
-
-
+dim(test)
 
 ```
 
 
 ```{r}
 
+dim(validation)
 
+```
+
+Trening skup ima 30000 opservacija sto je sasvim dovoljno. Validacioni i testni skup imaju po 10000 opservacija tako da cemo moci lepo da ispitamo da li nas model radi dobru procenu.
+
+```{r}
+
+train$rating = as.factor(train$rating)
+validation$rating = as.factor(validation$rating)
+test$rating = as.factor(test$rating)
+
+```
+
+Ciljna promenljiva je trenutno tipa int, a nama je potrebna klasifikacija u 5 nivoa, zato pretvaramo rating u factor promenljivu.
+
+Takodje cemo promenljivu sentiment prebaciti u numericku, neki modeli rade samo sa numerickim vrednostima, a sentiment ima samo 3 nivoa (Negative, Neutral i Positive).
+
+```{r}
+
+train$sentiment = as.numeric(factor(train$sentiment, levels = c("Negative", "Neutral", "Positive")))
+validation$sentiment = as.numeric(factor(validation$sentiment, levels = c("Negative", "Neutral", "Positive")))
+test$sentiment = as.numeric(factor(test$sentiment, levels = c("Negative", "Neutral", "Positive")))
+
+str(train)
+
+```
+
+Struktura skupa podataka nam sada odgovara.
+Idemo da napravimo vise modela.
+
+#K-Nearest Neighbors (KNN)
+
+```{r}
+
+library(class)
+library(caret)
+
+knn_model = knn(train = scale(train[, -8]), test = scale(test[, -8]), cl = train$rating, k = 7)
+
+confusionMatrix(knn_model, validation$rating)
+
+```
+
+Na prvi pogled vidimo da model nije bas najbolji (kada uporedimo Prediction i Reference u tabeli).
+Prediction nam govori sta je model predvideo a Reference sta je stvarna vrednost u nasem skupu.
+Accuracy (0.22) znaci da je samo 22% predikcija tacno, sto je veoma lose.
+Kappa (0.0052) - skoro 0 - model prakticno nije bolji od nasumicnog predvidjanja.
+Sensitivity ( TP/(TP+FN) ) - u koliko procenata model tacno predvidi klasu - vidimo da je ovde raspon od 0.13 do 0.29 sto je veoma lose.
+Specificity ( TN/(TN+FP) ) - koliko model tacno predvidi da nesto nije ta klasa - ovde moze da nam se ucini da je Specificity solidan, ali treba uzeti u obzir da imamo 5 klasa tako da je moguce da je model nasumicno birao neku od preostale 4 klase.
+
+Model je jako los, mozemo da pokusamo sa vecim brojem suseda.
+
+
+```{r}
+
+knn_model2 = knn(train = scale(train[, -8]), test = scale(test[, -8]), cl = train$rating, k = 25)
+
+confusionMatrix(knn_model2, validation$rating)
+
+```
+
+Pokusali smo sa cak 25 suseda, ali model je i dalje veoma los, tako da cemo morati da pokusamo sa necim kompleksnijim.
+
+
+#Multinomialna Logisticka Regresija
+
+```{r}
+
+library(nnet)
+
+mlr_model = multinom(rating ~ camera_rating + display_rating + battery_life_rating + design_rating + performance_rating + sentiment + helpful_votes, data = train)
 
 ```
 
 
 ```{r}
 
+mlr_predict = predict(mlr_model, newdata = test)
 
+confusionMatrix(mlr_predict, test$rating)
 
 ```
+
+Iz matrice Prediction vs. Reference odmah vidimo da je model prilicno dobar - svakako ima gresaka ali greske su uglavnom za 1 (ako je prava ocena 4, model eventualno moze predvideti da je ocena 3 ili 5).
+Accuracy (0.77) - u 77% slucajeva je model tacno predvideo
+Kappa (0.70) - ovo je sasvim zadovoljavajuca vrednost
+Sensitivity ( TP/(TP+FN) ) - izmedju 0.71 i 0.79, znaci za sve klase je solidan, nema neke klase za koju model ne predvidja dobro
+Specificity ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje sta nije odredjena klasa.
+
+Model je sasvim zadovoljavajuci, ali pokusacemo da pronadjemo jos bolji model.
+
+#Naive Bayes
+
+```{r}
+
+library(e1071)
+
+nb_model = naiveBayes(rating ~ ., data = train)
+
+nb_predict = predict(nb_model, newdata = test)
+
+confusionMatrix(nb_predict, test$rating)
+
+```
+Iz matrice Prediction vs. Reference vidimo da je situacija slicna kao kod Multinomialne Logisticke Regresije, model uglavnom pogadja ili promasuje za 1
+Accuracy (0.73) - u 73% slucajeva je model tacno predvideo, za nijansu manje nego kod MLR
+Kappa (0.65) - solidno visoka vrednost, ali nesto manja nego kod MLR
+Sensitivity ( TP/(TP+FN) ) - izmedju 0.65 i 0.88, nije priblizan za sve klase, dosta bolje pogadja ako je klasa 1 ili 5 nego ostale 
+Specificity ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje sta nije odredjena klasa, dosta slicno kao kod MLR.
+
+Model je za nijansu losije od prethodnog, nastavljamo sa drugim modelima.
+
+
 
 
 ```{r}
 
+library(rpart)
+library(rpart.plot)
 
+dt_model = rpart(rating ~ ., data = train, method = "class", control = rpart.control(cp = 0.01))
+
+rpart.plot(dt_model)
 
 ```
 
+Na grafiku mozemo videti na koji nacin Decision Tree model radi i kako odlucuje koliki ce biti rating na osnovu prediktora.
 
 ```{r}
 
+dt_predict = predict(dt_model, test, type = "class")
 
+confusionMatrix(dt_predict, test$rating)
 
 ```
 
+Model je losiji od prethodnih moji koriste Multinomial Logistic Regresion i Naive Bayes.
+
+#TO DO - detaljnije opisati ako ima potrebe, mozda i nema
+
+Probacemo neke kompleksnije modele, mozda nam daju bolje rezultate
+
+#Support Vector Machine - SVM
 
 ```{r}
 
+svm_model = svm(rating ~ ., data = train, kernel = "radial", cost = 1, gamma = 1/ncol(train))
 
+svm_predict = predict(svm_model, test)
 
+confusionMatrix(svm_predict, test$rating)
 ```
 
+SVM je sasvim dobar model, u rangu sa MLR
+
+#TO DO - mozemo detaljnije uporediti sa MLR modelom, mada su prilicno slicni rezultati
+#TO DO - moze da se uradi i fine tuning sa drugacijim cost i gamma
+
+Moguce da je ovo maksimum koji mozemo izvuci za ovaj skup, ali probacemo jos Random Forest (unapredjenu verziju Decision Tree) i XGBoost
+
+#Random Forest
+
+Random Forest smo vec koristili za odredjivanje najbitnijih prediktora, ovaj put ga koristimo kao model za predikciju.
 
 ```{r}
 
+library(randomForest)
 
+rf_model = randomForest(rating ~ ., data = train, ntree = 300, mtry = 3, importance = TRUE)
+
+rf_predict = predict(rf_model, newdata = test)
+
+confusionMatrix(rf_predict, test$rating)
 
 ```
 
+Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su slicni, cak za nijansu losiji nego kod ova dva modela.
+
+#TO DO - detaljnija analiza modela ako ima potrebe
+
+#XGBoost
 
 ```{r}
 
-
-
-```
-
-
-```{r}
-
-
+library(xgboost)
 
 ```
 
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
+#TO DO - trebalo je da koristim VALIDACIONI skup umesto test skupa, samo ih treba izrotirati gore gde sam radio podelu na skupove i promeniti imena u predict funkcijama sa test na validacioni - NIKAKO NE MENJATI samo u predict funkciji ako se ne zameni gore gde su deljeni skupovi, inace ce dati drugacije rezultate!
 
 ```{r}
 
