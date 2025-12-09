@@ -1052,7 +1052,7 @@ str(train)
 Struktura skupa podataka nam sada odgovara.
 Idemo da napravimo vise modela.
 
-#K-Nearest Neighbors
+#K-Nearest Neighbors (KNN)
 
 ```{r}
 
@@ -1072,7 +1072,6 @@ Kappa (0.0052) - skoro 0 - model prakticno nije bolji od nasumicnog predvidjanja
 Sensitivity ( TP/(TP+FN) ) - u koliko procenata model tacno predvidi klasu - vidimo da je ovde raspon od 0.13 do 0.29 sto je veoma lose.
 Specificity ( TN/(TN+FP) ) - koliko model tacno predvidi da nesto nije ta klasa - ovde moze da nam se ucini da je Specificity solidan, ali treba uzeti u obzir da imamo 5 klasa tako da je moguce da je model nasumicno birao neku od preostale 4 klase.
 
-
 Model je jako los, mozemo da pokusamo sa vecim brojem suseda.
 
 
@@ -1086,61 +1085,132 @@ confusionMatrix(knn_model2, validation$rating)
 
 Pokusali smo sa cak 25 suseda, ali model je i dalje veoma los, tako da cemo morati da pokusamo sa necim kompleksnijim.
 
+
+#Multinomialna Logisticka Regresija
+
 ```{r}
 
+library(nnet)
 
+mlr_model = multinom(rating ~ camera_rating + display_rating + battery_life_rating + design_rating + performance_rating + sentiment + helpful_votes, data = train)
 
 ```
 
 
 ```{r}
 
+mlr_predict = predict(mlr_model, newdata = test)
 
+confusionMatrix(mlr_predict, test$rating)
 
 ```
+
+Iz matrice Prediction vs. Reference odmah vidimo da je model prilicno dobar - svakako ima gresaka ali greske su uglavnom za 1 (ako je prava ocena 4, model eventualno moze predvideti da je ocena 3 ili 5).
+Accuracy (0.77) - u 77% slucajeva je model tacno predvideo
+Kappa (0.70) - ovo je sasvim zadovoljavajuca vrednost
+Sensitivity ( TP/(TP+FN) ) - izmedju 0.71 i 0.79, znaci za sve klase je solidan, nema neke klase za koju model ne predvidja dobro
+Specificity ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje sta nije odredjena klasa.
+
+Model je sasvim zadovoljavajuci, ali pokusacemo da pronadjemo jos bolji model.
+
+#Naive Bayes
+
+```{r}
+
+library(e1071)
+
+nb_model = naiveBayes(rating ~ ., data = train)
+
+nb_predict = predict(nb_model, newdata = test)
+
+confusionMatrix(nb_predict, test$rating)
+
+```
+Iz matrice Prediction vs. Reference vidimo da je situacija slicna kao kod Multinomialne Logisticke Regresije, model uglavnom pogadja ili promasuje za 1
+Accuracy (0.73) - u 73% slucajeva je model tacno predvideo, za nijansu manje nego kod MLR
+Kappa (0.65) - solidno visoka vrednost, ali nesto manja nego kod MLR
+Sensitivity ( TP/(TP+FN) ) - izmedju 0.65 i 0.88, nije priblizan za sve klase, dosta bolje pogadja ako je klasa 1 ili 5 nego ostale 
+Specificity ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje sta nije odredjena klasa, dosta slicno kao kod MLR.
+
+Model je za nijansu losije od prethodnog, nastavljamo sa drugim modelima.
+
+
 
 
 ```{r}
 
+library(rpart)
+library(rpart.plot)
 
+dt_model = rpart(rating ~ ., data = train, method = "class", control = rpart.control(cp = 0.01))
+
+rpart.plot(dt_model)
 
 ```
 
+Na grafiku mozemo videti na koji nacin Decision Tree model radi i kako odlucuje koliki ce biti rating na osnovu prediktora.
 
 ```{r}
 
+dt_predict = predict(dt_model, test, type = "class")
 
+confusionMatrix(dt_predict, test$rating)
 
 ```
 
+Model je losiji od prethodnih moji koriste Multinomial Logistic Regresion i Naive Bayes.
+
+#TO DO - detaljnije opisati ako ima potrebe, mozda i nema
+
+Probacemo neke kompleksnije modele, mozda nam daju bolje rezultate
+
+#Support Vector Machine - SVM
 
 ```{r}
 
+svm_model = svm(rating ~ ., data = train, kernel = "radial", cost = 1, gamma = 1/ncol(train))
 
+svm_predict = predict(svm_model, test)
 
+confusionMatrix(svm_predict, test$rating)
 ```
 
+SVM je sasvim dobar model, u rangu sa MLR
+
+#TO DO - mozemo detaljnije uporediti sa MLR modelom, mada su prilicno slicni rezultati
+#TO DO - moze da se uradi i fine tuning sa drugacijim cost i gamma
+
+Moguce da je ovo maksimum koji mozemo izvuci za ovaj skup, ali probacemo jos Random Forest (unapredjenu verziju Decision Tree) i XGBoost
+
+#Random Forest
+
+Random Forest smo vec koristili za odredjivanje najbitnijih prediktora, ovaj put ga koristimo kao model za predikciju.
 
 ```{r}
 
+library(randomForest)
 
+rf_model = randomForest(rating ~ ., data = train, ntree = 300, mtry = 3, importance = TRUE)
+
+rf_predict = predict(rf_model, newdata = test)
+
+confusionMatrix(rf_predict, test$rating)
 
 ```
 
+Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su slicni, cak za nijansu losiji nego kod ova dva modela.
+
+#TO DO - detaljnija analiza modela ako ima potrebe
+
+#XGBoost
 
 ```{r}
 
-
-
-```
-
-
-```{r}
-
-
+library(xgboost)
 
 ```
 
+#TO DO - trebalo je da koristim VALIDACIONI skup umesto test skupa, samo ih treba izrotirati gore gde sam radio podelu na skupove i promeniti imena u predict funkcijama sa test na validacioni - NIKAKO NE MENJATI samo u predict funkciji ako se ne zameni gore gde su deljeni skupovi, inace ce dati drugacije rezultate!
 
 ```{r}
 
