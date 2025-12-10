@@ -467,7 +467,7 @@ ggplot(reviews, aes(x = battery_life_rating, y = rating)) +
 # Korelacija
 cor(reviews$battery_life_rating, reviews$rating)
 ```
-Analiza grafickog prikaza odnosа između rating i battery_life_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu bateriji najcesce daju i veci ukupni rating uredjaja.
+Analiza grafickog prikaza odnosа izmedju rating i battery_life_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu bateriji najcesce daju i veci ukupni rating uredjaja.
 
 ##camera_rating
 
@@ -671,7 +671,7 @@ outliers_negative = reviews %>%
 Predstavimo ovo na grafiku
 ```{r}
 ggplot() +
-  # prosečan rating po modelu
+  # prosecan rating po modelu
   geom_col(data = avg_ratings, aes(x = reorder(model, avg_rating), y = avg_rating), fill = "skyblue") +
   geom_point(data = outliers_negative, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
   coord_flip() + 
@@ -687,7 +687,7 @@ Iz ovog grafika ne mozemo mnogo procitati. Vecina ispitanika svaki model ocenjuj
 
 ```{r}
 ggplot() +
-  # prosečan rating po modelu
+  # prosecan rating po modelu
   geom_col(data = meadian_by_model, aes(x = reorder(model, median_rating), y = median_rating), fill = "skyblue") +
   geom_point(data = outliers_negative, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
   coord_flip() + 
@@ -707,7 +707,7 @@ outliers_neutral = reviews %>%
 Ovde imamo vise odstupanja od prosecnog rating-a u odnosu na Negative.
 ```{r}
 ggplot() +
-  # prosečan rating po modelu
+  # prosecan rating po modelu
   geom_col(data = avg_ratings, aes(x = reorder(model, avg_rating), y = avg_rating), fill = "skyblue") +
   geom_point(data = outliers_neutral, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
   coord_flip() + 
@@ -718,7 +718,7 @@ ggplot() +
 
 ```{r}
 ggplot() +
-  # prosečan rating po modelu
+  # prosecan rating po modelu
   geom_col(data = meadian_by_model, aes(x = reorder(model, median_rating), y = median_rating), fill = "skyblue") +
   geom_point(data = outliers_neutral, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
   coord_flip() + 
@@ -747,7 +747,7 @@ ggplot(reviews, aes(x = factor(rating), y = age)) +
 ```{r}
 cor(reviews$age,reviews$rating)
 ```
-Na osnovu korelacije (r = 0.007518163) i grafikona, mozemo zakljuciti da starost korisnika nema znacajan uticaj na ocenu uređaja.
+Na osnovu korelacije (r = 0.007518163) i grafikona, mozemo zakljuciti da starost korisnika nema znacajan uticaj na ocenu uredjaja.
 Medjutim, posto je ovo numericka vrednost, mozemo godine svrstati u tri kategorije - Mladi, Srednje godine i Starija dob. 
 
 ```{r}
@@ -867,9 +867,9 @@ ggplot(df_month, aes(x = month, y = avg_rating)) +
   geom_line(size = 1) +
   geom_point(color = "steelblue") +
   labs(
-    title = "Prosečan rating po mesecima",
+    title = "Prosecan rating po mesecima",
     x = "Mesec",
-    y = "Prosečan rating"
+    y = "Prosecan rating"
   ) +
   theme_minimal()
 
@@ -998,8 +998,8 @@ Uzeli smo 60% podataka za trening skup. Ostatak cemo podeliti na test i validati
 remaining = reviews_important_vars[-index_train, ]
 index_test = sample(1:nrow(remaining), size = 0.5 * nrow(remaining))
 
-test = remaining[index_test, ]
-validation = remaining[-index_test, ]
+validation = remaining[index_test, ]
+test = remaining[-index_test, ]
 
 ```
 
@@ -1099,9 +1099,9 @@ mlr_model = multinom(rating ~ camera_rating + display_rating + battery_life_rati
 
 ```{r}
 
-mlr_predict = predict(mlr_model, newdata = test)
+mlr_predict = predict(mlr_model, newdata = validation)
 
-confusionMatrix(mlr_predict, test$rating)
+confusionMatrix(mlr_predict, validation$rating)
 
 ```
 
@@ -1121,9 +1121,9 @@ library(e1071)
 
 nb_model = naiveBayes(rating ~ ., data = train)
 
-nb_predict = predict(nb_model, newdata = test)
+nb_predict = predict(nb_model, newdata = validation)
 
-confusionMatrix(nb_predict, test$rating)
+confusionMatrix(nb_predict, validation$rating)
 
 ```
 Iz matrice Prediction vs. Reference vidimo da je situacija slicna kao kod Multinomialne Logisticke Regresije, model uglavnom pogadja ili promasuje za 1
@@ -1152,15 +1152,14 @@ Na grafiku mozemo videti na koji nacin Decision Tree model radi i kako odlucuje 
 
 ```{r}
 
-dt_predict = predict(dt_model, test, type = "class")
+dt_predict = predict(dt_model, validation, type = "class")
 
-confusionMatrix(dt_predict, test$rating)
+confusionMatrix(dt_predict, validation$rating)
 
 ```
 
 Model je losiji od prethodnih moji koriste Multinomial Logistic Regresion i Naive Bayes.
 
-#TO DO - detaljnije opisati ako ima potrebe, mozda i nema
 
 Probacemo neke kompleksnije modele, mozda nam daju bolje rezultate
 
@@ -1170,14 +1169,13 @@ Probacemo neke kompleksnije modele, mozda nam daju bolje rezultate
 
 svm_model = svm(rating ~ ., data = train, kernel = "radial", cost = 1, gamma = 1/ncol(train))
 
-svm_predict = predict(svm_model, test)
+svm_predict = predict(svm_model, validation)
 
-confusionMatrix(svm_predict, test$rating)
+confusionMatrix(svm_predict, validation$rating)
 ```
 
 SVM je sasvim dobar model, u rangu sa MLR
 
-#TO DO - mozemo detaljnije uporediti sa MLR modelom, mada su prilicno slicni rezultati
 #TO DO - moze da se uradi i fine tuning sa drugacijim cost i gamma
 
 Moguce da je ovo maksimum koji mozemo izvuci za ovaj skup, ali probacemo jos Random Forest (unapredjenu verziju Decision Tree) i XGBoost
@@ -1192,17 +1190,18 @@ library(randomForest)
 
 rf_model = randomForest(rating ~ ., data = train, ntree = 300, mtry = 3, importance = TRUE)
 
-rf_predict = predict(rf_model, newdata = test)
+rf_predict = predict(rf_model, newdata = validation)
 
-confusionMatrix(rf_predict, test$rating)
+confusionMatrix(rf_predict, validation$rating)
 
 ```
 
 Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su slicni, cak za nijansu losiji nego kod ova dva modela.
 
-#TO DO - detaljnija analiza modela ako ima potrebe
 
 #XGBoost
+
+XGBoost je napredna metoda koja kombinuje vise odlucujucih stabala da bi stvorila precizan model, uz regularizaciju koja smanjuje overfitting.
 
 ```{r}
 
@@ -1210,7 +1209,86 @@ library(xgboost)
 
 ```
 
-#TO DO - trebalo je da koristim VALIDACIONI skup umesto test skupa, samo ih treba izrotirati gore gde sam radio podelu na skupove i promeniti imena u predict funkcijama sa test na validacioni - NIKAKO NE MENJATI samo u predict funkciji ako se ne zameni gore gde su deljeni skupovi, inace ce dati drugacije rezultate!
+
+Prvo cemo odraditi pripremu podataka za xgboost
+Xgboost zahteva numericke matrice
+label za XGB mora biti numeric (klase 0,1,2,3...)
+
+```{r}
+train_matrix <- as.matrix(train[, -8])
+train_label <- as.numeric(train$rating) - 1  # XGBoost klase moraju poceti od 0
+
+validation_matrix <- as.matrix(validation[, -8])
+validation_label <- as.numeric(validation$rating) - 1
+
+```
+Kreiranje dmatrix objekata. Dmatrix nam treba iskljucivo kod xgboost-a jer je to posebna optimizovana struktura podataka koju XGBoost koristi da bi bio brzi, manje trosio memoriju...
+
+```{r}
+dtrain <- xgb.DMatrix(data = train_matrix, label = train_label)
+dval <- xgb.DMatrix(data = validation_matrix, label = validation_label)
+
+```
+
+Parametri xgboost modela za multi-class klasifikaciju
+```{r}
+
+num_class <- length(unique(train_label))
+
+```
+
+```{r}
+params <- list(
+  booster = "gbtree",
+  objective = "multi:softmax",
+  num_class = num_class,
+  eta = 0.1,
+  max_depth = 6,
+  subsample = 0.8,
+  colsample_bytree = 0.8,
+  eval_metric = "mlogloss"
+)
+```
+
+```{r}
+xgb_model <- xgb.train(
+  params = params,
+  data = dtrain,
+  nrounds = 200,
+  evals  = list(train = dtrain, eval = dval),
+  early_stopping_rounds = 10,
+  print_every_n = 10
+)
+
+
+```
+
+
+```{r}
+xgb_pred <- predict(xgb_model, dval)
+
+```
+
+Pretvaranje nazad u factor za confusion matrix
+
+```{r}
+xgb_pred_factor <- factor(xgb_pred + 1, levels = 1:num_class)
+validation_label_factor <- factor(validation_label + 1, levels = 1:num_class)
+```
+
+
+```{r}
+confusionMatrix(xgb_pred_factor, validation_label_factor)
+
+```
+Tacnost na validacionom skupu:
+Ukupna tacnost (Accuracy): 77%
+Kappa koeficijent: 0.7
+
+Model najbolje klasifikuje krajnje klase (1 i 5) sa visokom specificnoscu (obe klase ~0.97) i umerenom tacnoscu (klasa 1:~0.78,klasa5:~0.77).
+Srednje klase (2, 3, 4) pokazuju nesto nizu senzitivnost i preciznost, sto je ocekivano, jer su ocene numericki slicne i model ih teze razlikuje.
+Iz tabele predikcija mozemo videti  da se vecina gresaka javlja medju susednim klasama (npr. 2 i 3, 3 i 4).
+XGBoost je dao skoro iste rezultate kao MLR.
 
 ```{r}
 
@@ -1218,61 +1296,6 @@ library(xgboost)
 
 ```
 
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
-
-
-```{r}
-
-
-
-```
 
 
 
