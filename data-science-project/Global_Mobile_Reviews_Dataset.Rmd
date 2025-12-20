@@ -12,6 +12,13 @@ date: "2025-11-22"
 ```{r}
 
 library(tidyverse)
+library(randomForest)
+library(class)
+library(caret)
+library(nnet)
+library(e1071)
+library(rpart)
+library(xgboost)
 
 ```
 
@@ -56,11 +63,6 @@ Na osnovu rezultata komande ispod mozemo videti da ova kolona nema "skrivene" ne
 
 ```{r}
 sum(reviews[reviews$customer_name == ""])
-```
-###Pretvaranje u faktorsku promenljivu
-Posto ime nije numericka vrednost - ne mozemo sa njom vrsiti racunice kao sa brojevima, ona se smatra kategorijskom i to nominalnom kategorijskom promenljivom (ne postoji prirodni red za njene vrednosti). Zato cemo ime pretvoriti u faktorsku promenljivu.
-```{r}
-reviews$customer_name = factor(reviews$customer_name)
 ```
 
 ##age
@@ -292,6 +294,7 @@ ggplot(reviews, aes(x = sentiment)) +
   geom_bar(fill = "tomato", color = "black") +
   theme_minimal()
 ```
+
 ```{r}
 reviews$sentiment = factor(reviews$sentiment)
 ```
@@ -304,6 +307,7 @@ Mozemo primetiti da je podjednak broj review-a iz ovih zemalja, sa neznatnim ist
 ```{r}
 table(reviews$country)
 ```
+
 ```{r}
 reviews$country = factor(reviews$country)
 ```
@@ -334,6 +338,7 @@ Ovo su sve pitanja na koja je potrebno odgovoriti u nastavku.
 ```{r}
 table(reviews$verified_purchase)
 ```
+
 ```{r}
 reviews$verified_purchase = factor(reviews$verified_purchase)
 ```
@@ -786,6 +791,7 @@ ggplot(reviews, aes(x = source, y = rating)) +
   ) +
   theme_minimal()
 ```
+
 ```{r}
 anova_test <- aov(rating ~ source, reviews)
 summary(anova_test)
@@ -807,6 +813,7 @@ ggplot(reviews, aes(x = verified_purchase, y = rating, fill = verified_purchase)
     y = "Rating"
   ) + theme_minimal()
 ```
+
 ```{r}
 t.test(rating ~ verified_purchase, reviews)
 ```
@@ -911,18 +918,15 @@ ggplot(reviews, aes(x = country, y = rating, fill = country)) +
 Drzava takodje nema nikakav znacaj za ovo predvidjanje.
 
 
-
 ------------
 Feature selection
 ------------
 
 Iskoristicemo feature importance zasnovan na random forest modelu za selekciju najvaznijih prediktora.
 
-Random forest kombinuje veci broj stabala odlucivana, pogodan je za probleme klasifikacije (za klasifikaciju ne mozemo koristiti LASSO i RIDGE regularizaciju).
+Random forest kombinuje veci broj stabala odlucivanja, pogodan je za probleme klasifikacije (za klasifikaciju ne mozemo koristiti LASSO i RIDGE regularizaciju).
 
 ```{r}
-
-library(randomForest)
 
 rf_model <- randomForest(
   x = subset(reviews, select = -rating),
@@ -970,7 +974,7 @@ Najznacajniji prediktori su nam:
 
 ```{r}
 
-reviews_important_vars = reviews[, c("camera_rating", "display_rating", "battery_life_rating", "design_rating", "performance_rating", "sentiment", "helpful_votes", "rating")]
+reviews_important_vars = reviews[, c("camera_rating", "display_rating", "battery_life_rating", "design_rating", "performance_rating", "sentiment", "custom_price_usd", "rating")]
 
 names(reviews_important_vars)
 
@@ -1025,10 +1029,9 @@ dim(validation)
 
 ```
 
-Trening skup ima 30000 opservacija sto je sasvim dovoljno. Validacioni i testni skup imaju po 10000 opservacija tako da cemo moci lepo da ispitamo da li nas model radi dobru procenu.
+Trening skup ima 30 000 opservacija sto je sasvim dovoljno i predstavlja 60% ukupnog broja podataka (50 000). Validacioni i testni skup imaju po 10 000 opservacija tako da cemo moci lepo da ispitamo da li nas model radi dobru procenu.
 
 ```{r}
-
 train$rating = as.factor(train$rating)
 validation$rating = as.factor(validation$rating)
 test$rating = as.factor(test$rating)
@@ -1055,10 +1058,6 @@ Idemo da napravimo vise modela.
 #K-Nearest Neighbors (KNN)
 
 ```{r}
-
-library(class)
-library(caret)
-
 knn_model = knn(train = scale(train[, -8]), test = scale(test[, -8]), cl = train$rating, k = 7)
 
 confusionMatrix(knn_model, validation$rating)
@@ -1090,9 +1089,7 @@ Pokusali smo sa cak 25 suseda, ali model je i dalje veoma los, tako da cemo mora
 
 ```{r}
 
-library(nnet)
-
-mlr_model = multinom(rating ~ camera_rating + display_rating + battery_life_rating + design_rating + performance_rating + sentiment + helpful_votes, data = train)
+mlr_model = multinom(rating ~ camera_rating + display_rating + battery_life_rating + design_rating + performance_rating + sentiment + custom_price_usd, data = train)
 
 ```
 
@@ -1101,7 +1098,7 @@ mlr_model = multinom(rating ~ camera_rating + display_rating + battery_life_rati
 
 mlr_predict = predict(mlr_model, newdata = validation)
 
-confusionMatrix(mlr_predict, validation$rating)
+cm_mlr = confusionMatrix(mlr_predict, validation$rating)
 
 ```
 
@@ -1117,13 +1114,11 @@ Model je sasvim zadovoljavajuci, ali pokusacemo da pronadjemo jos bolji model.
 
 ```{r}
 
-library(e1071)
-
 nb_model = naiveBayes(rating ~ ., data = train)
 
 nb_predict = predict(nb_model, newdata = validation)
 
-confusionMatrix(nb_predict, validation$rating)
+cm_naive_bayes = confusionMatrix(nb_predict, validation$rating)
 
 ```
 Iz matrice Prediction vs. Reference vidimo da je situacija slicna kao kod Multinomialne Logisticke Regresije, model uglavnom pogadja ili promasuje za 1
@@ -1133,33 +1128,6 @@ Sensitivity ( TP/(TP+FN) ) - izmedju 0.65 i 0.88, nije priblizan za sve klase, d
 Specificity ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje sta nije odredjena klasa, dosta slicno kao kod MLR.
 
 Model je za nijansu losije od prethodnog, nastavljamo sa drugim modelima.
-
-
-
-
-```{r}
-
-library(rpart)
-library(rpart.plot)
-
-dt_model = rpart(rating ~ ., data = train, method = "class", control = rpart.control(cp = 0.01))
-
-rpart.plot(dt_model)
-
-```
-
-Na grafiku mozemo videti na koji nacin Decision Tree model radi i kako odlucuje koliki ce biti rating na osnovu prediktora.
-
-```{r}
-
-dt_predict = predict(dt_model, validation, type = "class")
-
-confusionMatrix(dt_predict, validation$rating)
-
-```
-
-Model je losiji od prethodnih moji koriste Multinomial Logistic Regresion i Naive Bayes.
-
 
 Probacemo neke kompleksnije modele, mozda nam daju bolje rezultate
 
@@ -1171,14 +1139,10 @@ svm_model = svm(rating ~ ., data = train, kernel = "radial", cost = 1, gamma = 1
 
 svm_predict = predict(svm_model, validation)
 
-confusionMatrix(svm_predict, validation$rating)
+cm_svm = confusionMatrix(svm_predict, validation$rating)
 ```
 
 SVM je sasvim dobar model, u rangu sa MLR
-
-#TO DO - moze da se uradi i fine tuning sa drugacijim cost i gamma
-
-Moguce da je ovo maksimum koji mozemo izvuci za ovaj skup, ali probacemo jos Random Forest (unapredjenu verziju Decision Tree) i XGBoost
 
 #Random Forest
 
@@ -1186,13 +1150,11 @@ Random Forest smo vec koristili za odredjivanje najbitnijih prediktora, ovaj put
 
 ```{r}
 
-library(randomForest)
-
 rf_model = randomForest(rating ~ ., data = train, ntree = 300, mtry = 3, importance = TRUE)
 
 rf_predict = predict(rf_model, newdata = validation)
 
-confusionMatrix(rf_predict, validation$rating)
+cm_rf = confusionMatrix(rf_predict, validation$rating)
 
 ```
 
@@ -1202,13 +1164,6 @@ Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su sl
 #XGBoost
 
 XGBoost je napredna metoda koja kombinuje vise odlucujucih stabala da bi stvorila precizan model, uz regularizaciju koja smanjuje overfitting.
-
-```{r}
-
-library(xgboost)
-
-```
-
 
 Prvo cemo odraditi pripremu podataka za xgboost
 Xgboost zahteva numericke matrice
@@ -1278,7 +1233,7 @@ validation_label_factor <- factor(validation_label + 1, levels = 1:num_class)
 
 
 ```{r}
-confusionMatrix(xgb_pred_factor, validation_label_factor)
+cm_xg_boost = confusionMatrix(xgb_pred_factor, validation_label_factor)
 
 ```
 Tacnost na validacionom skupu:
@@ -1290,18 +1245,146 @@ Srednje klase (2, 3, 4) pokazuju nesto nizu senzitivnost i preciznost, sto je oc
 Iz tabele predikcija mozemo videti  da se vecina gresaka javlja medju susednim klasama (npr. 2 i 3, 3 i 4).
 XGBoost je dao skoro iste rezultate kao MLR.
 
+Za svaki od kreiranih modela odradicemo sledece metrike na osnovu matrice konfuzije.
+
+```{r}
+calc_metrics <- function(cm){
+  cm = cm$table
+  # cm je numerička matrica, npr. cm$table
+  n_classes <- nrow(cm)
+  
+  acc <- sum(diag(cm)) / sum(cm)
+  
+  precision <- sapply(1:n_classes, function(i) cm[i,i]/sum(cm[,i]))
+  recall    <- sapply(1:n_classes, function(i) cm[i,i]/sum(cm[i,]))
+  f1        <- 2 * (precision * recall) / (precision + recall)
+  
+  macro_precision <- mean(precision, na.rm=TRUE)
+  macro_recall    <- mean(recall, na.rm=TRUE)
+  macro_f1        <- mean(f1, na.rm=TRUE)
+  
+  return(list(
+    accuracy = acc,
+    macro_precision = macro_precision,
+    macro_recall = macro_recall,
+    macro_f1 = macro_f1,
+    precision = precision,
+    recall = recall,
+    f1 = f1
+  ))
+}
+
+```
+
+
+
+```{r}
+metrics1 <- calc_metrics(cm_mlr)
+metrics2 <- calc_metrics(cm_naive_bayes)
+metrics3 <- calc_metrics(cm_svm)
+metrics4 <- calc_metrics(cm_rf)
+metrics5 <- calc_metrics(cm_xg_boost)
+```
+
+
+
+```{r}
+all_metrics <- data.frame(
+  model = c("Multinom", "NaiveBayes", "RandomForest", "SVM", "XGBoost"),
+  accuracy = c(metrics1$accuracy, metrics2$accuracy, metrics3$accuracy, metrics4$accuracy, metrics5$accuracy),
+  macro_precision = c(metrics1$macro_precision, metrics2$macro_precision, metrics3$macro_precision, metrics4$macro_precision, metrics5$macro_precision),
+  macro_recall = c(metrics1$macro_recall, metrics2$macro_recall, metrics3$macro_recall, metrics4$macro_recall, metrics5$macro_recall),
+  macro_f1 = c(metrics1$macro_f1, metrics2$macro_f1, metrics3$macro_f1, metrics4$macro_f1, metrics5$macro_f1)
+)
+```
+
+
+
+```{r}
+print(all_metrics)
+
+```
+Na osnovi svih vrednosti, mozemo zakljuciti da su svi modeli slicni, ali da na osnovu metrika najvise pouzdanosti ima Multinominalna regresija.
+
+
 ```{r}
 
+```
 
+
+
+```{r}
+
+```
+
+
+
+```{r}
 
 ```
 
 
 
 
+```{r}
+
+```
 
 
 
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
+
+
+
+
+```{r}
+
+```
+
+
+
+```{r}
+
+```
 
 
 
