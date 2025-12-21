@@ -452,7 +452,7 @@ nrow(unmatching) - sum(abs(abs(unmatching$price_usd - unmatching$custom_price_us
 ```
 
 ------------
-Odnos ciljane promenljive (rating) sa ostalim promenljivama u skupu.
+#Odnos ciljane promenljive (rating) sa ostalim promenljivama u skupu.
 ------------
 #battery_life_rating
 
@@ -556,7 +556,6 @@ ggplot(reviews, aes(x = display_rating, y = rating)) +
 cor(reviews$display_rating, reviews$rating)
 ```
 Odnos izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu. Korisnici koji daju vecu ocenu displeju uredjaja najcesce daju i veci ukupni rating uredjaja.
-
 
 #price_usd
 ```{r}
@@ -925,6 +924,10 @@ Feature selection
 Iskoristicemo feature importance zasnovan na random forest modelu za selekciju najvaznijih prediktora.
 
 Random forest kombinuje veci broj stabala odlucivanja, pogodan je za probleme klasifikacije (za klasifikaciju ne mozemo koristiti LASSO i RIDGE regularizaciju).
+
+```{r}
+str(reviews)
+```
 
 ```{r}
 
@@ -1306,19 +1309,175 @@ print(all_metrics)
 ```
 Na osnovi svih vrednosti, mozemo zakljuciti da su svi modeli slicni, ali da na osnovu metrika najvise pouzdanosti ima Multinominalna regresija.
 
+#Smanjenje broja prediktora
+Posto je model solidan, mozemo probati da ga poboljsamo koriscenjem promenljive avg_rating koju smo kreirari kao prosecnu ocenu promenljivih koje se zavrsavaju sa '_rating'.
+
+Kako bismo ostali konzistentni u koriscenju trening, validacionog i testnog skupa tokom uporedjivanja svih modela, na vec definisane skupove cemo dodati izracunatu promenljivu `avg_rating`.
 
 ```{r}
+train = train %>%
+  mutate(avg_rating = rowMeans(across(ends_with("_rating"))))
+
+validation = validation %>%
+  mutate(avg_rating = rowMeans(across(ends_with("_rating"))))
+
+test = test %>%
+  mutate(avg_rating = rowMeans(across(ends_with("_rating"))))
+```
+
+```{r}
+head(train)
+
+```
+
+#Multinomialna regresija sa avg_rating
+
+```{r}
+important_vars = train[, c("avg_rating", "sentiment", "custom_price_usd", "rating")]
+```
+
+
+Dodatno, iako nam je prvi random_forest ocenio price_usd kao bitan prediktor, u poredjenju sa ciljnom promenljovom mi smo ustanovili da cena nije presudna za rating. Zato cemo ovde pokusati da je izbacimo i da za prediktore uzmemo samo sledece 2 promenljive:
+- avg_rating
+- sentiment
+
+#Multinomialna Logisticka Regresija
+
+```{r}
+
+mlr_model = multinom(rating ~ avg_rating + sentiment, data = train)
+
+```
+
+Ovaj model je podjednako dobar i u ovom slucaju, kada su samo sentiment i avg_rating ukljuceni. Ovo treba imati u vidu, zbog kompleksnosti modela. Ovako dobijeni model ima manju kompleksnost jer ima manji broj prediktora.
+```{r}
+
+mlr_predict = predict(mlr_model, newdata = validation)
+
+confusionMatrix(mlr_predict, validation$rating)
+
+```
+
+Iz matrice Prediction vs. Reference odmah vidimo da je model prilicno dobar - svakako ima gresaka ali greske su uglavnom za 1 (ako je prava ocena 4, model eventualno moze predvideti da je ocena 3 ili 5).
+Accuracy (0.77) - u 77% slucajeva je model tacno predvideo
+Kappa (0.70) - ovo je sasvim zadovoljavajuca vrednost
+Sensitivity ( TP/(TP+FN) ) - izmedju 0.71 i 0.79, znaci za sve klase je solidan, nema neke klase za koju model ne predvidja dobro
+Specificity ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje sta nije odredjena klasa.
+
+Model je sasvim zadovoljavajuci, ali pokusacemo da pronadjemo jos bolji model.
+
+#Naive Bayes
+Takodje dobar rezultat, u ovom slucaju bolji rezultat ovog modela od prethodnog (sa vecim brojem prediktora) - 0.7344, a sada je accuracy 0.7508.
+Ali, multinominalna regresija je jos uvek u blagoj prednosti. 
+```{r}
+
+nb_model = naiveBayes(rating ~ avg_rating + sentiment, data = train)
+
+nb_predict = predict(nb_model, newdata = validation)
+
+confusionMatrix(nb_predict, validation$rating)
+
+```
+Iz matrice Prediction vs. Reference vidimo da je situacija slicna kao kod Multinomialne Logisticke Regresije, model uglavnom pogadja ili promasuje za 1
+Accuracy (0.73) - u 73% slucajeva je model tacno predvideo, za nijansu manje nego kod MLR
+Kappa (0.65) - solidno visoka vrednost, ali nesto manja nego kod MLR
+Sensitivity ( TP/(TP+FN) ) - izmedju 0.65 i 0.88, nije priblizan za sve klase, dosta bolje pogadja ako je klasa 1 ili 5 nego ostale 
+Specificity ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje sta nije odredjena klasa, dosta slicno kao kod MLR.
+
+Model je za nijansu losije od prethodnog, nastavljamo sa drugim modelima.
+
+Probacemo neke kompleksnije modele, mozda nam daju bolje rezultate
+
+#Support Vector Machine - SVM
+
+Odlican rezultat i za ovaj model. Takodje, za nijansu je bolji od istog modela sa vecim brojem prediktora.
+```{r}
+
+svm_model = svm(rating ~ avg_rating + sentiment, data = train, kernel = "radial", cost = 10, gamma = 0.01, scale = TRUE)
+svm_predict = predict(svm_model, validation)
+
+confusionMatrix(svm_predict, validation$rating)
+```
+
+SVM je sasvim dobar model, u rangu sa MLR.
+
+#Random Forest
+
+Random Forest smo vec koristili za odredjivanje najbitnijih prediktora, ovaj put ga koristimo kao model za predikciju.
+
+```{r}
+
+rf_model = randomForest(rating ~ avg_rating + sentiment, data = train, ntree = 300, mtry = 3, importance = TRUE)
+
+rf_predict = predict(rf_model, newdata = validation)
+
+confusionMatrix(rf_predict, validation$rating)
+
+```
+
+Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su slicni, cak za nijansu losiji nego kod ova dva modela.
+
+
+//TODO: Odraditi dodatno metrike za ove modele i napisati zakljucak
+Za svaki od kreiranih modela odradicemo sledece metrike na osnovu matrice konfuzije.
+
+```{r}
+calc_metrics <- function(cm){
+  cm = cm$table
+  # cm je numerička matrica, npr. cm$table
+  n_classes <- nrow(cm)
+  
+  acc <- sum(diag(cm)) / sum(cm)
+  
+  precision <- sapply(1:n_classes, function(i) cm[i,i]/sum(cm[,i]))
+  recall    <- sapply(1:n_classes, function(i) cm[i,i]/sum(cm[i,]))
+  f1        <- 2 * (precision * recall) / (precision + recall)
+  
+  macro_precision <- mean(precision, na.rm=TRUE)
+  macro_recall    <- mean(recall, na.rm=TRUE)
+  macro_f1        <- mean(f1, na.rm=TRUE)
+  
+  return(list(
+    accuracy = acc,
+    macro_precision = macro_precision,
+    macro_recall = macro_recall,
+    macro_f1 = macro_f1,
+    precision = precision,
+    recall = recall,
+    f1 = f1
+  ))
+}
 
 ```
 
 
 
 ```{r}
-
+metrics1 <- calc_metrics(cm_mlr)
+metrics2 <- calc_metrics(cm_naive_bayes)
+metrics3 <- calc_metrics(cm_svm)
+metrics4 <- calc_metrics(cm_rf)
+metrics5 <- calc_metrics(cm_xg_boost)
 ```
 
 
 
+```{r}
+all_metrics <- data.frame(
+  model = c("Multinom", "NaiveBayes", "RandomForest", "SVM", "XGBoost"),
+  accuracy = c(metrics1$accuracy, metrics2$accuracy, metrics3$accuracy, metrics4$accuracy, metrics5$accuracy),
+  macro_precision = c(metrics1$macro_precision, metrics2$macro_precision, metrics3$macro_precision, metrics4$macro_precision, metrics5$macro_precision),
+  macro_recall = c(metrics1$macro_recall, metrics2$macro_recall, metrics3$macro_recall, metrics4$macro_recall, metrics5$macro_recall),
+  macro_f1 = c(metrics1$macro_f1, metrics2$macro_f1, metrics3$macro_f1, metrics4$macro_f1, metrics5$macro_f1)
+)
+```
+
+
+
+```{r}
+print(all_metrics)
+
+```
 ```{r}
 
 ```
