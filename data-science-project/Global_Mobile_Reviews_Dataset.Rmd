@@ -1478,100 +1478,32 @@ all_metrics <- data.frame(
 print(all_metrics)
 
 ```
-
-
-# NOTE: Mora prvo git2r da se instalira da bi mogao mlflow
 ```{r}
-install.packages("git2r")
-install.packages("mlflow")
-library(mlflow)
 
 ```
 
 
-#NOTE: Prvo moramo instalirati mlflow za python
-1. Linux:
-sudo apt install -y pipx
-pipx ensurepath
-pipx install mlflow
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-mlflow --version
-Ispis treba da bude ovakav:
-mlflow, version 3.8.0
 
 
-2. Za Windows bi trebalo da bude samo:
-python3 pip install mlflow 
-I dodati u PATH ako vec nije dodato.
-
-
-# Kada je instaliran iz terminala pokrenemo komandu:
-mlflow ui
-# Zatim u browser-u otvorimo
-http://127.0.0.1:5000
-odnosno
-http://localhost:5000
-i mozemo videti UI za mlflow
-
-#Dodajemo env varijable potrebne za mlflow
-NOTE: Ovo ce biti drugacije na Windows-u, morate da pronadjete gde vam je bin file za mlflow i za python
 ```{r}
-Sys.setenv(
-  MLFLOW_BIN = "/home/darko/.local/bin/mlflow",
-  MLFLOW_PYTHON_BIN = "/usr/bin/python3"
-)
 
 ```
 
 
-Trenutno mlflow klijent iz R-a ne salje logove na mlflow UI, nego ih pise lokalno u .../mlruns
 
 ```{r}
-
-mlflow_get_tracking_uri()
 
 ```
 
-Moramo prvo podesiti da logovi idu na http://127.0.0.1:5000
+
+
 ```{r}
-mlflow_set_tracking_uri("http://127.0.0.1:5000")
 
 ```
 
-#Nakon sto je to uradjeno, mozemo kreirati novi MLFlow eksperiment 
-```{r}
-mlflow_set_experiment("Mobile_Reviews_Rating")
 
-mlflow_start_run()
-mlflow_log_metric("test", 1)
-mlflow_end_run()
-```
-# Nakon ovoga bi trebalo da je testni eksperiment vidljiv u mlflow UI (u Experiments)
-
-#Primer za Multinomijalnu regresiju
 
 ```{r}
-
-mlflow_start_run(run_name = "Multinomial_Logistic_Regression")
-
-mlflow_log_param("model", "Multinomial Logistic Regression")
-mlflow_log_param("predictors", 7)
-
-mlr_model <- multinom(
-  rating ~ camera_rating + display_rating + battery_life_rating +
-           design_rating + performance_rating + sentiment + custom_price_usd,
-  data = train
-)
-
-mlr_pred <- predict(mlr_model, validation)
-cm_mlr <- confusionMatrix(mlr_pred, validation$rating)
-
-mlflow_log_metric("accuracy", cm_mlr$overall["Accuracy"])
-mlflow_log_metric("kappa", cm_mlr$overall["Kappa"])
-
-mlflow_end_run()
-
 
 ```
 
