@@ -549,7 +549,8 @@ Ovo je odlicno, zato sto smo sada sigurni u ispravnost ove promenljive i mozemo 
 
 Svaku promenljivu u skupu podataka cemo analizirati u odnosu na ciljnu promenljivu – rating kako bismo videli da li postoji veza u njihovim vrednostima. Na ovaj nacin, steci cemo bolji uvid u prirodu odnosa promenljivih i kasnije odrediti prediktore. 
 
-<span style="color:red;">[Izmenjeno]</span><br>
+<span style="color:red;">[Izmenjeno]</span>  
+
 ### battery_life_rating
 Posto su obe promenljive kategorijske, grafikom cemo lakse uociti povezanost medju njima. 
 
@@ -578,7 +579,8 @@ Dodatno, provericemo pomocu funkcije _cor()_ zavisnost izmedju dve promenljive. 
 cor(reviews$battery_life_rating, reviews$rating)
 ```
 
-<span style="color:red;">[Izmenjeno]</span><br>
+<span style="color:red;">[Izmenjeno]</span>  
+
 ### camera_rating
 Situacija sa odnosom izmedju promenljivih camera_rating i rating je slicna kao i prethodna. Veza izmedju dve promenljive je jaka i linearna.  
 
@@ -604,7 +606,8 @@ Ispod mozemo videti visoku vrednost i funkcije _cor()_ za odnos sa ciljnom prome
 cor(reviews$camera_rating, reviews$rating)
 ```
 
-<span style="color:red;">[Izmenjeno]</span><br>
+<span style="color:red;">[Izmenjeno]</span>  
+
 ### performance_rating  
 
 Takodje i ovde graficki prikaz odnosа izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu performansama uredjaja najcesce daju i veci ukupni rating uredjaja. 
@@ -622,7 +625,8 @@ Da bismo potvrdili zakljucak sa grafika, mozemo pogledati i rezultat funkcije _c
 cor(reviews$performance_rating, reviews$rating)
 ```
 
-<span style="color:red;">Izmenjeno</span><br>
+<span style="color:red;">Izmenjeno</span>  
+
 ## design_rating  
 Sa grafika mozemo videti da osobe koje daju pozitivne ocene za dizajn uredjaja, najcesce imaju i visoku krajnju ocenu za uredjaj. 
 
@@ -640,7 +644,8 @@ I za ovu promenljivu, funkcija _cor()_ pokazuje visok stepen korelacije sa ciljn
 cor(reviews$design_rating, reviews$rating)
 ```
 
-<span style="color:red;">Izmenjeno</span><br>
+<span style="color:red;">Izmenjeno</span>  
+
 ### display_rating  
 
 Jos jedna promenljiva koja pokazuje umereno jaku zavisnost sa ciljnom promenljivom – _rating_. 
@@ -680,7 +685,7 @@ ggplot(reviews, aes(x = factor(rating), y = price_usd)) +
   theme_minimal()
 ```
 
-<span style="color:red;">[Izmenjen grafik]</span><br>  
+<span style="color:red;">[Izmenjen grafik]</span>  
 
 ### brand  
 
@@ -699,7 +704,7 @@ ggplot(reviews, aes(x = factor(brand), fill = factor(rating))) +
   theme(legend.position = "none")
 ```
 
-<span style="color:red;">[Izmenjeni grafici]</span><br>  
+<span style="color:red;">[Izmenjeni grafici]</span>  
 
 ### sentiment  
 Sa grafika ispod mozemo uociti sledece:
@@ -830,7 +835,7 @@ outlier_num_total = negative_sentiment_outlier_num + neutral_sentiment_outlier_n
 outlier_num_total
 ```
 
-<span style="color:red;">[Dodato]</span><br>  
+<span style="color:red;">[Dodato]</span>  
 
 ## Uklanjanje outlier-a iz skupa podataka  
 
@@ -910,7 +915,7 @@ table(reviews$age_category, reviews$rating)
 
 Na osnovu ove tabele, mozemo videti da sve uzrasne grupe ocenjuju uredjaje najcesce sa 3 i 4, sto je negde prosecna ocena. Dodatno, na osnovu ove tabele mozemo zakljuciti da odsupanja na prethodnom grafiku – koja lice na outlier-e to nisu. To je starija populacija koje ima dosta manje u odnosu na ostale dve. 
 
-<span style="color:red;">[Izmenjen grafik]</span><br>  
+<span style="color:red;">[Izmenjen grafik]</span>  
 
 ### source  
 
@@ -938,7 +943,7 @@ ocenjivanju uredjaja.
 Hocemo sada da proverimo verified_purchase u odnosu na rating, zato sto verifikovana kupovina povecava kredibilitet ocene, 
 ljudi koji su stvarno kupili uredjaj obicno daju realnije ocene, manje laznih bot komentara.
 
-<span style="color:red;">[Izmenjen grafik]</span><br>
+<span style="color:red;">[Izmenjen grafik]</span>  
 
 ### verified_purchase  
 
@@ -958,7 +963,7 @@ ggplot(reviews, aes(x = factor(verified_purchase), fill = factor(rating))) +
   ) + theme_minimal()
 ```
 
-<span style="color:red;">[Izmenjen grafik]</span><br>  
+<span style="color:red;">[Izmenjen grafik]</span>  
 
 ### helpful_votes  
 
@@ -1030,7 +1035,7 @@ Sa grafika mozemo videti da su podaci prilicno nasumicno rasporedjeni, takodje o
 
 Ova promenljiva nam verovatno nece biti znacajna u predvidjanju. 
 
-<span style="color:red;">[Izmenjen grafik]</span><br>  
+<span style="color:red;">[Izmenjen grafik]</span>  
 
 ### language  
 
@@ -1050,7 +1055,7 @@ ggplot(reviews, aes(x = factor(language), fill = factor(rating))) +
   )
 ```
 
-<span style="color:red;">[Izmenjen grafik]</span><br>  
+<span style="color:red;">[Izmenjen grafik]</span>  
 
 ### country  
 
@@ -1141,7 +1146,7 @@ names(reviews_important_vars)
 
 ```
 
-<span style="color:red;">[Dodato]</span><br>  
+<span style="color:red;">[Dodato]</span>  
 
 ## Provera multikolinearnosti izmedju prediktora  
 
@@ -1397,7 +1402,7 @@ Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su sl
 ```{r}
 cm_rf
 ```
-<span style="color:red;">[Dodato]</span><br>  
+<span style="color:red;">[Dodato]</span>  
 
 ## XGBoost  
 
@@ -1567,7 +1572,7 @@ cm_svm_reduced
 ```
 SVM je sasvim dobar model, u rangu sa MLR.
 
-<span style="color:red;">[Dodato]</span><br>  
+<span style="color:red;">[Dodato]</span>  
 
 ## Random Forest sa _avg_rating_  
 
@@ -1588,7 +1593,7 @@ cm_rf_reduced
 
 Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su slicni, cak za nijansu losiji nego kod ova dva modela.
 
-<span style="color:red;">[Dodato]</span><br>  
+<span style="color:red;">[Dodato]</span>  
 
 ## Binarizacija output-a  
 
@@ -1629,7 +1634,7 @@ Pogledajmo strukturu podataka sada. Mozemo videti da su vrednosti za _rating_ ma
 str(train)
 ```
 
-<span style="color:red;">[Dodato]</span><br>  
+<span style="color:red;">[Dodato]</span>  
 
 ## Binarna logisticka regresija  
 
@@ -1659,7 +1664,7 @@ cm_binary_output = confusionMatrix(glm_class, validation$high_rating)
 
 cm_binary_output
 ```
-<span style="color:red;">[Dodato]</span><br>  
+<span style="color:red;">[Dodato]</span>  
 
 ## Uporedjivanje modela kroz metrike  
 
@@ -1863,7 +1868,7 @@ mlflow_end_run()
 Nakon ovoga bi trebalo da je testni eksperiment vidljiv u mlflow UI (u Experiments).
 Takodje u okviru eksperimenta mozemo videti "run" koji smo u okviru njega izversili i metriku koju smo poslali.
 
-<span style="color:red;">[Dodato]</span><br>  
+<span style="color:red;">[Dodato]</span>  
 
 ## Poredjenje modela  
 
