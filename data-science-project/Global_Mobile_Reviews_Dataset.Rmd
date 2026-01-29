@@ -549,7 +549,7 @@ Ovo je odlicno, zato sto smo sada sigurni u ispravnost ove promenljive i mozemo 
 
 Svaku promenljivu u skupu podataka cemo analizirati u odnosu na ciljnu promenljivu – rating kako bismo videli da li postoji veza u njihovim vrednostima. Na ovaj nacin, steci cemo bolji uvid u prirodu odnosa promenljivih i kasnije odrediti prediktore. 
 
-<span style="color:red;">[Izmenjeno]</span>
+<span style="color:red;">[Izmenjeno]</span><br>
 ### battery_life_rating
 Posto su obe promenljive kategorijske, grafikom cemo lakse uociti povezanost medju njima. 
 
@@ -578,7 +578,7 @@ Dodatno, provericemo pomocu funkcije _cor()_ zavisnost izmedju dve promenljive. 
 cor(reviews$battery_life_rating, reviews$rating)
 ```
 
-<span style="color:red;">[Izmenjeno]</span>
+<span style="color:red;">[Izmenjeno]</span><br>
 ### camera_rating
 Situacija sa odnosom izmedju promenljivih camera_rating i rating je slicna kao i prethodna. Veza izmedju dve promenljive je jaka i linearna.  
 
@@ -680,13 +680,16 @@ ggplot(reviews, aes(x = factor(rating), y = price_usd)) +
   theme_minimal()
 ```
 
+<span style="color:red;">[Izmenjen grafik]</span><br>  
+
 ### brand  
+
 Uprkos tome sto bismo mozda ocekivali da brend utice na krajnju ocenu uredjaja, grafik i podaci iz naseg skupa podataka ne govore u prilog tome.  
 
 Prema grafiku, ne postoji statisticki znacajna razlika u prosecnom rating-u izmedju razlicitih brendova. 
 ```{r}
-ggplot(reviews, aes(x = brand, y = rating, fill = brand)) +
-  geom_boxplot() +
+ggplot(reviews, aes(x = factor(brand), fill = factor(rating))) +
+  geom_bar(position = "dodge") +
   theme_minimal() +
   labs(
     title = "Uporedjivanje ratinga po brandu",
@@ -696,6 +699,8 @@ ggplot(reviews, aes(x = brand, y = rating, fill = brand)) +
   theme(legend.position = "none")
 ```
 
+<span style="color:red;">[Izmenjeni grafici]</span><br>  
+
 ### sentiment  
 Sa grafika ispod mozemo uociti sledece:
 - recenzije sa Negative sentimentom imaju uglavnom niske ocene (1–2)
@@ -704,11 +709,7 @@ Sa grafika ispod mozemo uociti sledece:
 
 Logicno je da ce zadovoljni kupci davati vece ocene. 
 
-  
-
 Ono sto dodatno mozemo uociti na grafiku jesu potencijalni outlier-i za Negative i Neutral vrednosti promenljive Sentiment. Iako je vecina korisnika koja je za Sentiment dala ocenu Negative ocenila proizvod sa 1 i 2, postoje korisnici koji su ipak ocenili sa 4. Kod neutral je slicna situacija, najcesce ocene su 2 i 3, ali imamo i ocenu 5.  
-
-Na osnovu ovoga, proverimo koliko ima Negative sentiment a ocenu > 3
 
 ```{r}
 ggplot(reviews, aes(x = sentiment, y = rating)) +
@@ -719,142 +720,147 @@ ggplot(reviews, aes(x = sentiment, y = rating)) +
   theme_minimal()
 ```
 
-Mozemo videti da ima 62 review sa ovom situacijom.
+Kako bismo bolje uvideli outlier-e, mozemo za svaku kategoriju iz _sentiment_-a kreirati grafik. Ono sto cemo ukljuciti u sam grafik jeste model uredjaja, jer se moze da dogoditi da je to outlier u opstem skupu podataka, ali ne i za model uredjaja. 
 
+## Graficki prikaz outlier-a  
+
+Posto imamo veliki broj kategorija za modele, a zelimo da vidimo outlier-e po kategoriji modela i po kategoriji sentiment-a, razdvojicemo grafike za svaku pojedinacnuu vrednosti _sentiment_-a.
+
+### Negative sentiment  
+
+Najpre cemo prikazati negativne vrednosti ove promenljive.
+Na grafiku ispod mozemo videti da je najveci broj korisnika, kada je izrazio opste nezadovoljstvo proizvodom, dao i negativnu konacnu ocenu, odnosno 1 ili 2. Medjutim, ima dosta korisnika koji su dali i prosecnu ocenu - 3.
+One ocene, koje mozemo smatrati outlier-ima su ocene 4. Ovo su vrednosti koje odskacu na grafiku i predstavljaju outlier-e. 
 ```{r}
-nrow(reviews %>%
-       filter(sentiment == "Negative", rating > 3))
-```
+negative_sentiment_df = reviews %>%
+  filter(sentiment == "Negative")
 
-Kako bismo bolje videli sta se desava, mozemo videti koji modeli su ocenjeni na ovakav nacin. 
-
-Vidimo u tabeli ispod da ima razlicitih modela sa odstupanjima, pa je korisno videti koliko prosecna ocena odstupa za svaki model. 
-
-```{r}
-reviews %>% 
-  filter(sentiment == "Negative", rating > 3) %>%
-  group_by(model) %>%
-  summarize(n = n()) %>%
-  arrange(desc(n))
-
-```
-
-Uglavnom je prosecna ocena za ovakve modele 3, tako da mozemo smatrati da odsupanje nije preveliko.
-
-```{r}
-reviews %>%
-  group_by(model) %>%
-  summarise(avg_rating = mean(rating))
-```
-
-Za situaciju kada je Sentiment Neutral imamo nesto vise outlier-a, tj nesto vise korisnika koji su ocenili taj model sa najvisom ocenom. 
-
-```{r}
-nrow(reviews %>%
-       filter(sentiment == "Neutral", rating == 5))
-```
-
-Isto kao i za prethodnu situaciju, pogledajmo kakav je odnos medju samim modelima.
-
-```{r}
-reviews %>% 
-  filter(sentiment == "Neutral", rating == 5) %>%
-  group_by(model) %>%
-  summarize(n = n()) %>%
-  arrange(desc(n))
-```
-
-Kako bismo stekli bolji utisak o outlier-ima, predstavicemo ih graficki. Pripremimo neke dodatne podatke za graficki prikaz: 
-
-```{r}
-avg_ratings = reviews %>% 
-  group_by(model) %>%
-  summarise(avg_rating = mean(rating))
-```
-
-## Median-a rating-a po modelu  
-```{r}
-meadian_by_model = reviews %>%
-  group_by(model) %>%
-  summarise(median_rating = median(rating))
-```
-
-Sada, izdvojimo outlier-e u poseban dataframe.
-```{r}
-outliers_negative = reviews %>% 
-  filter(sentiment == "Negative", rating > 3)
-```
-
-Na grafiku mozemo jasnije uociti da je prosecna ocena za modele oko 3 (sto je ocekivano), dok outlier-i idu oko 4.
-
-```{r}
-ggplot(reviews, aes(x = reorder(model, rating), y = rating)) +
-  geom_boxplot(fill = "skyblue", outlier.colour = "red", outlier.size = 2) +
-  labs(title = "Distribucija ocena po modelima sa outlier-ima",
-       x = "Model uređaja",
-       y = "Rating") + 
-   theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ggplot(negative_sentiment_df, aes(x = model, y = rating)) + 
+  geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(
+    color = "tomato",
+    width = 0.15,
+    alpha = 0.4,
+    size = 1
+  ) + 
+  coord_flip() +
+  theme_minimal()
 
 ```
 
-Posto prosecna ocena nije nije uvek merodavna, mozemo graficki predstaviti i odnos median-e i outlier-a 
-
-Iz ovog grafika ne mozemo mnogo procitati. Vecina ispitanika svaki model ocenjuje srednjom ocenom.
-
+Posto smo preko grafika zakljucili da su outlier-i one vrednosti koje imaju _rating_ preko 3, mozemo prebrojati koliko ima tih vrednosti.
+Vidimo da postoji 62 outlier-a kada je _sentiment_ negativan.
 ```{r}
-ggplot(reviews, aes(x = reorder(model, rating), y = rating)) +
-  geom_boxplot(fill = "skyblue", outlier.colour = "red", outlier.size = 2) +
-  geom_point(data = meadian_by_model,
-             aes(x = model, y = median_rating),
-             color = "black", size = 2) +
-  labs(title = "Distribucija ocena po modelima sa median vrednostima i outlier-ima",
-       x = "Model uređaja",
-       y = "Rating") +
-     theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+negative_sentiment_outlier_num = sum(negative_sentiment_df$rating > 3)
+
+negative_sentiment_outlier_num
 
 ```
 
-Obzirom na prirodu samog skupa podataka i subjektivnosti svakog pojedinca pri ocenjivanju, ova odstupanja necemo smatrati outlier-ima za sada.  
+### Neutral sentiment  
 
-Jedan korisnik moze biti u potpunosti zadovoljan nekim telefonom, dok drugom ne mora da se dopada. Ovo je individualna stvar. 
+Sada cemo pogledati sta se desava sa neutralnim opstim iskustvom o modelu uredjaja.
 
-U svakom slucaju, imacemo informaciju o outlier-ima u vidu prilikom generisanja modela. 
-
-Isto cemo odraditi i kada je _sentiment_ _Neutral_.
-
-```{r}
-outliers_neutral = reviews %>% 
-  filter(sentiment == "Neutral", rating == 5)
-```
-
-Ovde imamo vise odstupanja od prosecnog rating-a u odnosu na Negative.
-```{r}
-ggplot(reviews, aes(x = reorder(model, rating), y = rating)) +
-  geom_boxplot(fill = "skyblue", outlier.colour = "red", outlier.size = 2) +
-  geom_point(data = outliers_neutral,
-             aes(x = model, y = rating),
-             color = "red", size = 2,
-             position = position_jitter(width = 0.2)) +
-  labs(title = "Distribucija ocena po modelima sa neutralnim outlier-ima",
-       x = "Model uređaja",
-       y = "Rating") + 
-       theme(axis.text.x = element_text(angle = 45, hjust = 1))
-```
+Na grafiku ispod mozemo primetiti da je slabija grupacija kada je vrednost za _rating_ veca od 4.
+Tako da mozemo smatrati da su u ovoj kategoriji - kada je sentiment neutralan, outlier-i krecu kao vrednosti za _rating_ vece od 4.
 
 ```{r}
-ggplot() +
-  # prosecan rating po modelu
-  geom_col(data = meadian_by_model, aes(x = reorder(model, median_rating), y = median_rating), fill = "skyblue") +
-  geom_point(data = outliers_neutral, aes(x = model, y = rating), color = "red", size = 2, position = position_jitter(width = 0.2)) +
-  coord_flip() + 
-  labs(title= "Prosecan rating po modelu i outlier-i", 
-       x = "Model uredjaja", 
-       y = "Rating")
+neutral_sentiment_df = reviews %>%
+  filter(sentiment == "Neutral")
+
+ggplot(neutral_sentiment_df, aes(x = model, y = rating)) + 
+  geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(
+    color = "tomato",
+    width = 0.15,
+    alpha = 0.4,
+    size = 1
+  ) + 
+  coord_flip() +
+  theme_minimal()
+
+```
+Kao i sa prethodnom kategorijom, izracunacemo o kom broju outlier-a se radi.
+Ovde imamo nesto vise ovih vrednosti, ali obzirom da nam skup podataka ima 50 hiljada redova, mozemo reci da to nije veliki broj outlier-a.
+
+```{r}
+neutral_sentiment_outlier_num = sum(neutral_sentiment_df$rating > 4)
+
+neutral_sentiment_outlier_num
 ```
 
-Na osnovu grafika i analize, vidimo da postoje jasni outlier-e u odnosu sentiment-rating. 
-Za sada cemo biti svesni ovih outlier-a i ispratiti kako oni u buducnosti uticu na model zato sto mozda neka druga vrednost tj. prediktor pokuce ocenu pojedinca.
 
+### Positive sentiment  
+
+Poslednja, treca kategorija za sentiment su pozitivne vrednosti, odnosno pozitivan opsti utisak o uredjaju. 
+
+Izdvojimo ove vrednosti u poseban data frame i nacrtajmo grafik kako bismo vizuelno uocili outlier-a.
+
+Zahvaljujuci grafiku, mozemo videti da su ovde outlier-i vrednosti koje imaju _rating_ manji od 2, sto je donekle i ocekivano, ali grafik to potvrdjuje.
+```{r}
+positive_sentiment_df = reviews %>%
+  filter(sentiment == "Positive")
+
+ggplot(positive_sentiment_df, aes(x = model, y = rating)) + 
+  geom_boxplot(outlier.shape = NA) + 
+  geom_jitter(
+    color = "tomato",
+    width = 0.15,
+    alpha = 0.4,
+    size = 1
+  ) + 
+  coord_flip() +
+  theme_minimal()
+```
+
+Na osnovu grafika isto mozemo videti da nema previse outlier-a u ovoj kategoriji, ali je najpreciznije izracunati tacnu vrednost.
+```{r}
+positive_sentiment_outlier_num = sum(positive_sentiment_df$rating < 2)
+
+positive_sentiment_outlier_num
+```
+
+Kada saberemo broj outlier-a za svaku kategoriju promenljive _sentiment_ mozemo videti da u nasem skupu podataka imamo 170 outlier-a.
+Ovaj broj outlier-a predstavlja manje od 1% ukupnih opservacija u nasem skupu podataka, preciznije ~ 0.34%. 
+
+```{r}
+outlier_num_total = negative_sentiment_outlier_num + neutral_sentiment_outlier_num + positive_sentiment_outlier_num
+
+outlier_num_total
+```
+
+<span style="color:red;">[Dodato]</span><br>  
+
+## Uklanjanje outlier-a iz skupa podataka  
+
+Posto outlier-i predstavljaju zanemarljivu kolicinu podataka u nasem skupu podataka, a mogu imati znacajan uticaj na preciznost samog modela, uklonicemo ih iz naseg skupa podataka.
+
+Sumirajmo ono po cemu treba izbaciti outlier-e:
+- Kada _sentiment_ ima vrednost _Negative_ i _rating_ veci od 3, te opservacije se smatraju outlier-ima
+- Kada _sentiment_ ima vrednost _Neutral_ i _rating_ veci od 4, te opservacije se smatraju outlier-ima
+- Kada _sentiment_ ima vrednost _Positive_ i _rating_ manji od 2, te opservacije se smatraju outlier-ima
+
+Uklonimo ovakve vrednosti iz skupa podataka.
+
+```{r}
+reviews = reviews %>%
+  filter(!(sentiment == "Negative" & rating > 3))
+
+reviews = reviews %>%
+  filter(!(sentiment == "Neutral" & rating > 4))
+
+reviews = reviews %>%
+  filter(!(sentiment == "Positive" & rating < 2))
+
+```
+
+Proverimo da li su uspesno uklonjeni outlier-i proverom broja redova u skupu podataka. 
+Vidimo da je broj redova smanjen, sto znaci da smo uspesno uklonili outlier-e.
+
+```{r}
+dim(reviews)
+```
 
 ### age  
 
@@ -904,6 +910,8 @@ table(reviews$age_category, reviews$rating)
 
 Na osnovu ove tabele, mozemo videti da sve uzrasne grupe ocenjuju uredjaje najcesce sa 3 i 4, sto je negde prosecna ocena. Dodatno, na osnovu ove tabele mozemo zakljuciti da odsupanja na prethodnom grafiku – koja lice na outlier-e to nisu. To je starija populacija koje ima dosta manje u odnosu na ostale dve. 
 
+<span style="color:red;">[Izmenjen grafik]</span><br>  
+
 ### source  
 
 Sada cemo proveriti odnos source i rating. Source predstavlja mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen. Platforma na kojoj je recenzija ostavljena moZe biti indikator i kvaliteta samog uredjaja (npr. prodaja kopija na odredjenim sajtovima). 
@@ -911,12 +919,11 @@ Sada cemo proveriti odnos source i rating. Source predstavlja mesto gde je komen
 Ne postoji statisticki znacajna razlika u prosecnim ocenama izmedju razlicitih platformi. To znaci da source nije presudan faktor uocenjivanju uredjaja. 
 
 ```{r}
-ggplot(reviews, aes(x = source, y = rating)) +
-  geom_boxplot(width = 0.2, fill = "steelblue") +
+ggplot(reviews, aes(x = source, fill = factor(rating))) +
+  geom_bar(position = "dodge") +
   labs(
-    title = "Uporedjivanje ratinga po platformama (source)",
-    x = "Platforma",
-    y = "Ukupni rating"
+    x = "Source",
+    y = "Broj ocena po kategoriji rating-a (od 1 do 5)"
   ) +
   theme_minimal()
 ```
@@ -931,6 +938,8 @@ ocenjivanju uredjaja.
 Hocemo sada da proverimo verified_purchase u odnosu na rating, zato sto verifikovana kupovina povecava kredibilitet ocene, 
 ljudi koji su stvarno kupili uredjaj obicno daju realnije ocene, manje laznih bot komentara.
 
+<span style="color:red;">[Izmenjen grafik]</span><br>
+
 ### verified_purchase  
 
 Hocemo sada da proverimo verified_purchase u odnosu na rating, zato sto verifikovana kupovina povecava kredibilitet ocene. Ljudi koji su stvarno kupili uredjaj obicno daju realnije ocene, manje laznih bot komentara. 
@@ -940,14 +949,16 @@ Iako smo pretpostavili da verifikovane recenzije imaju vecu kredibilnost, analiz
 Zbog ove analize, necemo iskljuciti vrednosti sa neverifikovanom recenzijom iz skupa podataka zato sto, kao sto vidimo na grafiku ispod, nema znacajnog uticaja. 
 
 ```{r}
-ggplot(reviews, aes(x = verified_purchase, y = rating, fill = verified_purchase)) +
-  geom_boxplot() +
+ggplot(reviews, aes(x = factor(verified_purchase), fill = factor(rating))) +
+  geom_bar(position = "dodge") +
   labs(
     title = "Uporedjivanje ocena po statusu kupovine",
     x = "Verified Purchase",
     y = "Rating"
   ) + theme_minimal()
 ```
+
+<span style="color:red;">[Izmenjen grafik]</span><br>  
 
 ### helpful_votes  
 
@@ -957,13 +968,11 @@ Znaci popularnije recenzije su cesto one koje su dale dobru ocenu proizvodu.
 
 ```{r}
 
-ggplot(reviews, aes(x = helpful_votes, y = rating)) +
-  geom_jitter(alpha = 0.3, color = "steelblue") +
-  geom_smooth(method = "lm", se = FALSE, color = "darkred", size = 1.2) +
+ggplot(reviews, aes(x = factor(rating), y = helpful_votes)) +
+  geom_violin(fill = "tomato") + 
   labs(
-    title = "Odnos rating i helpful_votes",
-    x = "Helpful votes",
-    y = "Ukupni rating"
+    x = "Ocena modela od 1 do 5 (rating)",
+    y = "Broj korisnih glasova (helpful_votes)"
   ) +
   theme_minimal()
 
@@ -1021,41 +1030,43 @@ Sa grafika mozemo videti da su podaci prilicno nasumicno rasporedjeni, takodje o
 
 Ova promenljiva nam verovatno nece biti znacajna u predvidjanju. 
 
+<span style="color:red;">[Izmenjen grafik]</span><br>  
+
 ### language  
 
-Na osnovu grafika ispod, mozemo zakljuciti da jezik recenzije nema nikakav uticaj na ciljnu promenljivu. 
+Na osnovu grafika ispod, mozemo zakljucitida svi jezici daju proporcionalno iste glasove. Najvise ima onih sa _rating_-om 4 i 3, pa zatim ostalih. 
+Za svaki jezik mozemo videti da je struktura identicna, samo za englesko govorno podrucje ima vise recenzije pa je zbog toga prividno drugacije.
+Oblik zastupljenosti ocena je identican za sve jezike.
 
 ```{r}
 
-ggplot(reviews, aes(x = language, y = rating, fill = language)) +
-  geom_boxplot() +
+ggplot(reviews, aes(x = factor(language), fill = factor(rating))) +
+  geom_bar(position = "dodge") +
   theme_minimal() +
   labs(
     title = "Uporedjivanje ratinga po jeziku",
     x = "Language",
     y = "Rating"
-  ) +
-  theme(legend.position = "none")
-
+  )
 ```
 
+<span style="color:red;">[Izmenjen grafik]</span><br>  
 
 ### country  
 
-Jos jedna promenljiva koja ne pokazuje nikakav uticaj na nasu ciljnu promenljivu – rating. Ovo se jasno moze videti sa grafika ispod gde su na X osi predstavljene zemlje, a na Y rating. 
+Jos jedna promenljiva koja ne pokazuje nikakav uticaj na nasu ciljnu promenljivu – rating. 
+Na grafiku se jasno videi da je _rating_ priblizno istog oblika za sve drzave.
 
 ```{r}
 
-ggplot(reviews, aes(x = country, y = rating, fill = country)) +
-  geom_boxplot() +
+ggplot(reviews, aes(x = factor(country), fill = factor(rating))) +
+  geom_bar(position = "dodge") +
   theme_minimal() +
   labs(
     title = "Uporedjivanje ratinga po drzavama",
     x = "Country",
-    y = "Rating"
-  ) +
-  theme(legend.position = "none")
-
+    y = "Count"
+  )
 ```
 
 
@@ -1130,7 +1141,8 @@ names(reviews_important_vars)
 
 ```
 
-<span style="color:red;">[Dodato]</span><br>
+<span style="color:red;">[Dodato]</span><br>  
+
 ## Provera multikolinearnosti izmedju prediktora  
 
 Posto smo odabrali skup prediktora koji ce potencijalno dobro opisati model, treba proveriti da li izmedju tih prediktora postoji neka vrsta multikolinearnosti. 
@@ -1261,25 +1273,25 @@ Za ovaj model cemo kreirati konfuzionu matricu.`
 confusionMatrix(pred, validation$rating)
 ```
 
-Na prvi pogled vidimo da model nije bas najbolji (kada uporedimo Prediction i Reference u tabeli). 
+Na prvi pogled vidimo da model ima solidnu preciznost.
 
 Prediction nam govori sta je model predvideo a Reference sta je stvarna vrednost u nasem skupu. 
 
-Accuracy (0.22) znaci da je samo 22% predikcija tacno, sto je veoma lose. 
+- Accuracy (0.74) znaci da je 74% predikcija tacno, sto je solidno. 
 
-Kappa (0.0052) - skoro 0 - model prakticno nije bolji od nasumicnog predvidjanja. 
+Kappa (0.6757) - sto je takodje solidno.
 
-Sensitivity ( TP/(TP+FN) ) - u koliko procenata model tacno predvidi klasu - vidimo da je ovde raspon od 0.13 do 0.29 sto je veoma lose. 
+Sensitivity ( TP/(TP+FN) ) - u koliko procenata model tacno predvidi klasu - vidimo da je ovde raspon od 0.66 do 0.84. Malo bolje predidja klase 1 i 5 od ostalih (srednjih vrednosti). 
 
-Specificity ( TN/(TN+FP) ) - koliko model tacno predvidi da nesto nije ta klasa - ovde moze da nam se ucini da je Specificity solidan, ali treba uzeti u obzir da imamo 5 klasa tako da je moguce da je model nasumicno birao neku od preostale 4 klase. 
+Specificity ( TN/(TN+FP) ) - koliko model tacno predvidi da nesto nije ta klasa. Mozemo videti da je ovde prilicno predizan obzirom da su mu sve vrednosti iznad 0.9.
 
-Mozemo zakljuciti da ovaj model daje izuzetno lose rezultate, ali posto je vrednost za K konfigurabilna, mozemo pokusati da je povecamo i vidimo rezultate. 
+Mozemo pokusati da poboljsamo model povecavanjem parametra K posto je ta vrednost konfigurabilna.
 
-Povecali smo broj suseda, odnosno K na 25, medjutim model i dalje pokazuje jako lose rezultate.  
+Povecali smo broj suseda, odnosno K na 125, medjutim model i dalje pokazuje slicne rezultate.  
 
 ```{r}
 
-knn_model_2 <- kknn(rating ~ ., train, validation, k = 25, kernel = "triangular")
+knn_model_2 <- kknn(rating ~ ., train, validation, k = 125, kernel = "triangular")
 pred_2 <- fitted(knn_model)
 
 confusionMatrix(pred_2, validation$rating)
@@ -1337,10 +1349,10 @@ cm_nb
 
 Iz matrice Prediction vs. Reference vidimo da je situacija slicna kao kod Multinomialne Logisticke Regresije, model uglavnom pogadja ili promasuje za 1 
 
-- _Accuracy_ (0.73) - u 73% slucajeva je model tacno predvideo, za nijansu manje nego kod MLR 
-- _Kappa_ (0.65) - solidno visoka vrednost, ali nesto manja nego kod MLR 
-- _Sensitivity_ ( TP/(TP+FN) ) - izmedju 0.65 i 0.88, nije priblizan za sve klase, dosta bolje pogadja ako je klasa 1 ili 5 nego ostale  
-- _Specificity_ ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje sta nije odredjena klasa, dosta slicno kao kod MLR. 
+- _Accuracy_ (0.61) - u 61% slucajeva je model tacno predvideo,  manje nego kod MLR 
+- _Kappa_ (0.52) - dosta niza vrednost nego kod MLR
+- _Sensitivity_ ( TP/(TP+FN) ) - izmedju 0.67 i 0.99, nije priblizan za sve klase, dosta bolje pogadja ako je klasa 1 ili 5 nego ostale  
+- _Specificity_ ( TN/(TN+FP) ) - sve su preko 0.9 osim 5, model solidno prepoznaje sta nije odredjena klasa, dosta slicno kao kod MLR. 
 
 Model je za nijansu losije od prethodnog, nastavljamo sa drugim modelima. 
 
@@ -1385,6 +1397,7 @@ Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su sl
 ```{r}
 cm_rf
 ```
+<span style="color:red;">[Dodato]</span><br>  
 
 ## XGBoost  
 
@@ -1460,15 +1473,15 @@ validation_label_factor <- factor(validation_label + 1, levels = 1:num_class)
 ```{r}
 cm_xg_boost = confusionMatrix(xgb_pred_factor, validation_label_factor)
 
+cm_xg_boost
+
 ```
 
 Tacnost na validacionom skupu:
-Ukupna tacnost (Accuracy): 77%
+Ukupna tacnost (Accuracy): 76%
 Kappa koeficijent: 0.7
 
-Model najbolje klasifikuje krajnje klase (1 i 5) sa visokom specificnoscu (obe klase ~0.97) i umerenom tacnoscu (klasa 1:~0.78,klasa5:~0.77).
-Srednje klase (2, 3, 4) pokazuju nesto nizu senzitivnost i preciznost, sto je ocekivano, jer su ocene numericki slicne i model ih teze razlikuje.
-Iz tabele predikcija mozemo videti  da se vecina gresaka javlja medju susednim klasama (npr. 2 i 3, 3 i 4).
+Model podjednako dobro klaifikuje sve klase.
 XGBoost je dao skoro iste rezultate kao MLR.
 
 ## Smanjenje broja prediktora  
@@ -1503,7 +1516,7 @@ Sada smo redukovali broj prediktora, ali smo ostavili  promenljivu _sentiment_ k
 
 ```{r}
 
-mlr_model = multinom(rating ~ avg_rating + sentiment, data = train)
+mlr_model_reduced = multinom(rating ~ avg_rating + sentiment, data = train)
 
 ```
 
@@ -1511,17 +1524,18 @@ Ovaj model je podjednako dobar i u ovom slucaju, kada su samo _sentiment_ i _avg
 
 ```{r}
 
-mlr_predict = predict(mlr_model, newdata = validation)
+mlr_predict = predict(mlr_model_reduced, newdata = validation)
 
 cm_mlr_reduced = confusionMatrix(mlr_predict, validation$rating)
+
+cm_mlr_reduced
 
 ```
 
 ## Naive Bayes sa _avg_rating_  
 
-Takodje dobar rezultat, u ovom slucaju bolji rezultat ovog modela od prethodnog (sa vecim brojem prediktora) - 0.7344, a sada je accuracy 0.7508. 
-
-Ali, multinominalna regresija je jos uvek u blagoj prednosti. 
+Solidan rezultat, mada je ovaj model pokazao losije rezultate od modela sa vecim brojem prediktora. Ovaj model ima accuracy 0.61, dok onaj sa vecim brojem prediktora ima 0.66.
+Svakako, MLR se jos uvek najbolje pokazao.
 
 ```{r}
 
@@ -1531,6 +1545,8 @@ nb_predict = predict(nb_model, newdata = validation)
 
 cm_nb_reduced = confusionMatrix(nb_predict, validation$rating)
 
+cm_nb_reduced
+
 ```
 
 ## Support Vector Machine - SVM sa _avg_rating_  
@@ -1538,9 +1554,9 @@ cm_nb_reduced = confusionMatrix(nb_predict, validation$rating)
 Odlican rezultat i za ovaj model. Takodje, za nijansu je bolji od istog modela sa vecim brojem prediktora.
 ```{r}
 
-svm_model = svm(rating ~ avg_rating + sentiment, data = train, kernel = "radial", cost = 10, gamma = 0.01, scale = TRUE)
+svm_model_reduced = svm(rating ~ avg_rating + sentiment, data = train, kernel = "radial", cost = 10, gamma = 0.01, scale = TRUE)
 
-svm_predict = predict(svm_model, validation)
+svm_predict = predict(svm_model_reduced, validation)
 
 cm_svm_reduced = confusionMatrix(svm_predict, validation$rating)
 ```
@@ -1551,23 +1567,29 @@ cm_svm_reduced
 ```
 SVM je sasvim dobar model, u rangu sa MLR.
 
+<span style="color:red;">[Dodato]</span><br>  
+
 ## Random Forest sa _avg_rating_  
 
 Pokusajmo da vidimo kakve rezultate ce nam dati Random Forest kada mu smanjimo broj prediktora.
+Probacemo i sa manjim brojem stabala da bismo smanjili kompleksnost modela - ako dobijemo slicne metrike onda je bolje da imamo manji broj stabala (ntree)
 
 ```{r}
 
-rf_model = randomForest(rating ~ avg_rating + sentiment, data = train, ntree = 300, mtry = 2, importance = TRUE)
+rf_model_reduced = randomForest(rating ~ avg_rating + sentiment, data = train, ntree = 100, mtry = 2, importance = TRUE)
 
-rf_predict = predict(rf_model, newdata = validation)
+rf_predict = predict(rf_model_reduced, newdata = validation)
 
 cm_rf_reduced = confusionMatrix(rf_predict, validation$rating)
+
+cm_rf_reduced
 
 ```
 
 Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su slicni, cak za nijansu losiji nego kod ova dva modela.
 
-<span style="color:red;">[Dodato]</span><br>
+<span style="color:red;">[Dodato]</span><br>  
+
 ## Binarizacija output-a  
 
 Ukoliko bismo ciljnu promenljivu podelili u dve kategorije:
@@ -1607,7 +1629,9 @@ Pogledajmo strukturu podataka sada. Mozemo videti da su vrednosti za _rating_ ma
 str(train)
 ```
 
-##Binarna logisticka regresija  
+<span style="color:red;">[Dodato]</span><br>  
+
+## Binarna logisticka regresija  
 
 ```{r}
 
@@ -1632,7 +1656,10 @@ str(validation)
 
 ```{r}
 cm_binary_output = confusionMatrix(glm_class, validation$high_rating)
+
+cm_binary_output
 ```
+<span style="color:red;">[Dodato]</span><br>  
 
 ## Uporedjivanje modela kroz metrike  
 
@@ -1689,7 +1716,7 @@ all_metrics <- data.frame(
   model = c(
     "Multinom", "NaiveBayes", "RandomForest", "SVM", "XGBoost",
     "Multinom sa avg_rating", "NaiveBayes sa avg_rating", "RandomForest sa avg_rating", "SVM sa avg_rating",
-    "Multinom sa binarizacijom output-a"
+    "Multinom sa bin. output-om"
   ),
   accuracy = c(
     metrics_mlr$accuracy, metrics_nb$accuracy, metrics_rf$accuracy, metrics_svm$accuracy, metrics_xg_boost$accuracy,
@@ -1720,141 +1747,646 @@ all_metrics <- data.frame(
 print(all_metrics)
 
 ```
-Na osnovu tabele iznad mozzemo zakljuciti da je multinominalna regresija dala najbolje rezultate za obe varijante (sa _avg_rating_ i sa svim ostalim prediktorima).
+Na osnovu tabele iznad mozemo zakljuciti da je multinominalna regresija dala najbolje rezultate za obe varijante (sa _avg_rating_ i sa svim ostalim prediktorima).
 Model koji koristi binarizaciju output-a dao je najbolje rezultate.
 
-# NOTE: Mora prvo git2r da se instalira da bi mogao mlflow
+
+# MLFlow
+
+MLFlow je MLOps alat koji omogucava pracenje eksperimenata u masinskom ucenju, ukljucujuci cuvanje parametara, metrika, modela i artifakata vezanih za modele.
+Njegova svrha je da nam olaksa poredjenje razlicitih modela i verzija tokom razvoja.
+Omogucava nam da imamo sve modele na jednom mestu sto nam olaksava izbor najboljeg modela za dalju upotrebu.
+
+
+## Instalacija MLFlow
+
+MLFlow se moze koristiti u lokalnom okruzenju (localhost), a postoji mogucnost i da se koristi kao samostalni server ili u cloud infrastrukturi.
+U nasem primeru MLFlow je instaliran lokalno - to nam omogucava jednostavno pokretanje istog i pregled rezultata u korisnickom interfejsu (UI-u) u svom browser-u.
+Lokalna instalacija je sasvim dovoljna za demonstraciju osnovnih MLFlow funkcionalnosti.
+
+U nastavku je primer instalacije na Linux operativnom sistemu (Ubuntu 24.04):
+
+1. instaliramo **pipx** - alat za instalaciju Python aplikacija
+_sudo apt install -y pipx_
+
+2. dodajemo **pipx** u path varijablu - ovo nam omogucava da mozemo da ga izvrsavamo sa bilo koje lokacije na nasem racunaru
+_pipx ensurepath_
+
+3. Instalacija **MLFlow-a**
+_pipx install mlflow_
+
+4. dodajemo mlflow u path - opet da bismo mogli da ga izvrsavamo sa bilo koje lokacije na racunaru
+_echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc_
+_source ~/.bashrc_
+
+5. proveravamo da li smo uspesno instalirali MLFlow
+_mlflow --version_
+Ispis treba da bude ovakav (eventualno druga verzija):
+_mlflow, version 3.8.1_
+
+
+Nakon sto je ovo zavrseno i validirano je da imamo instaliran MLFlow instaliran na nasem racunaru, moramo instalirati i potrebne R pakete - **git2r** i **mlflow**
+_install.packages("git2r")_
+_install.packages("mlflow")_
+
+
+Potrebno je ucitati samo mlflow library u R-u, git2r je samo zavisnost koja nam je potrebna za njegovo koriscenje.
 ```{r}
-#install.packages("git2r")
-#install.packages("mlflow")
-#library(mlflow)
+
+library(mlflow)
 
 ```
 
 
-#NOTE: Prvo moramo instalirati mlflow za python
-1. Linux:
-sudo apt install -y pipx
-pipx ensurepath
-pipx install mlflow
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-mlflow --version
-Ispis treba da bude ovakav:
-mlflow, version 3.8.0
+## Pokretanje MLFlow
+
+Sve sto treba da uradimo je da iz terminala pokrenemo sledecu komandu:
+_mlflow ui_
+Zatim u browser-u otvorimo http://127.0.0.1:5000 (ili http://localhost:5000) i mozemo videti spreman MLFlow UI
 
 
-2. Za Windows bi trebalo da bude samo:
-python3 pip install mlflow 
-I dodati u PATH ako vec nije dodato.
+U R-u moramo dodati **environment varijable** potrebne za komunikaciju izmedju MLFlow klijenta i servera.
 
-
-# Kada je instaliran iz terminala pokrenemo komandu:
-mlflow ui
-# Zatim u browser-u otvorimo
-http://127.0.0.1:5000
-odnosno
-http://localhost:5000
-i mozemo videti UI za mlflow
-
-#Dodajemo env varijable potrebne za mlflow
-NOTE: Ovo ce biti drugacije na Windows-u, morate da pronadjete gde vam je bin file za mlflow i za python
 ```{r}
-#Sys.setenv(
-#  MLFLOW_BIN = "/home/darko/.local/bin/mlflow",
-#  MLFLOW_PYTHON_BIN = "/usr/bin/python3"
-#)
+Sys.setenv(
+  MLFLOW_BIN = "/home/petrux/.local/bin/mlflow",
+  MLFLOW_PYTHON_BIN = "/usr/bin/python3"
+)
 
 ```
 
 
-Trenutno mlflow klijent iz R-a ne salje logove na mlflow UI, nego ih pise lokalno u .../mlruns
+Sledeca komanda nam govori na kojoj lokaciji se trenutno cuvaju logovi poslati sa mlflow klijenta.
 
 ```{r}
 
-#mlflow_get_tracking_uri()
+mlflow_get_tracking_uri()
 
 ```
 
-Moramo prvo podesiti da logovi idu na http://127.0.0.1:5000
-```{r}
-#mlflow_set_tracking_uri("http://127.0.0.1:5000")
-
-```
-
-#Nakon sto je to uradjeno, mozemo kreirati novi MLFlow eksperiment 
-```{r}
-#mlflow_set_experiment("Mobile_Reviews_Rating")
-
-#mlflow_start_run()
-#mlflow_log_metric("test", 1)
-#mlflow_end_run()
-```
-# Nakon ovoga bi trebalo da je testni eksperiment vidljiv u mlflow UI (u Experiments)
-
-#Primer za Multinomijalnu regresiju
+Da bismo postigli slanje logova na MLFlow UI (umesto pisanja lokalno u direktorijum _/mlruns_), moramo dodati **tracking uri**
 
 ```{r}
 
-#mlflow_start_run(run_name = "Multinomial_Logistic_Regression")
-
-#mlflow_log_param("model", "Multinomial Logistic Regression")
-#mlflow_log_param("predictors", 7)
-
-#mlr_model <- multinom(
-#  rating ~ camera_rating + display_rating + battery_life_rating +
-#           design_rating + performance_rating + sentiment + custom_price_usd,
-#  data = train
-#)
-
-#mlr_pred <- predict(mlr_model, validation)
-#cm_mlr <- confusionMatrix(mlr_pred, validation$rating)
-
-#mlflow_log_metric("accuracy", cm_mlr$overall["Accuracy"])
-#mlflow_log_metric("kappa", cm_mlr$overall["Kappa"])
-
-#mlflow_end_run()
-
+mlflow_set_tracking_uri("http://127.0.0.1:5000")
 
 ```
 
 
+## Validacija komunikacije izmedju MLFlow klijenta i servera
+
+Odradicemo jedan minimalni test kojim cemo proveriti da li je sve ispravno podeseno i da li MLFlow klijent iz R-a salje logove na pravo mesto (MLFlow UI).
+
+```{r}
+
+mlflow_set_experiment("Test_v1")
+
+```
+
+```{r}
+
+mlflow_start_run()
+
+```
+
+```{r}
+
+mlflow_log_metric("test", 1)
+
+```
+
+```{r}
+
+mlflow_end_run()
+
+```
+Nakon ovoga bi trebalo da je testni eksperiment vidljiv u mlflow UI (u Experiments).
+Takodje u okviru eksperimenta mozemo videti "run" koji smo u okviru njega izversili i metriku koju smo poslali.
+
+<span style="color:red;">[Dodato]</span><br>  
+
+## Poredjenje modela  
+
+Nakon sto smo prosli inicijalno podesavanje, mozemo preci na poredjenje nasih modela koristeci MLFlow.
+
+Postupak je prilicno pravolinijski:
+1. Pokrenemo jedan **eksperiment** u kome ce biti svi nasi modeli
+2. Pokrenemo **run** za svaki model (uz svaki model saljemo njegove parametre, metrike dobijene predikcijom nad trening i test skupom i artefakte - npr. .png fajl sa slikom confusion matrice i/ili model kao .rds fajl)
+3. U MLFlow UI-u uporedimo modele po metrikama i izaberemo onaj koji se pokazao kao najbolji
+4. Najbolji model oznacavamo kao produkcioni
+5. Nakon toga mozemo ucitati najbolji model u R i koristiti ga za predvidjanje
+
 
 
 ```{r}
+mlflow_set_experiment("Global_Mobile_Reviews_Models_Exp_01")
+```
+
+Nakon sto smo pokrenuli eksperiment, slacemo jedan po jedan model zajedno sa parametrima i metrikama u MLFlow.
+Koristicemo modele koje smo vec napravili u prethodnim koracima.
+
+
+## Multinomijalna Logisticka Regresija  
+
+
+```{r}
+mlflow_start_run()
+```
+
+Logujemo parametre vezane za model
+
+```{r}
+mlflow_log_param("model_type", "Multinomial_Logistic_Regresion")
+mlflow_log_param("predictors_count", 6)
+```
+
+Prvo cemo odraditi predikciju na trening i test skupu koristeci nas MLR model
+
+```{r}
+test$rating = factor(test$rating)
+
+pred_train = predict(mlr_model, newdata = train)
+pred_test = predict(mlr_model, newdata = test)
+```
+
+Zatim pravimo confision matrix za oba skupa 
+
+```{r}
+cm_train = confusionMatrix(pred_train, train$rating)
+cm_test = confusionMatrix(pred_test, test$rating)
+```
+
+Logovacemo metrike iz matrice konfuzije u MLFlow
+
+```{r}
+mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_train", cm_train$overall["Kappa"])
+
+mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
+```
+
+Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+
+```{r}
+
+plot_cm = function(cm, filename) {
+  df = as.data.frame(cm$table)
+  colnames(df) = c("Prediction", "Reference", "Freq")
+  
+  p = ggplot(df, aes(x = Reference, y = Prediction, fill = Freq)) +
+    geom_tile() +
+    geom_text(aes(label = Freq), color = "white") +
+    scale_fill_gradient(low = "steelblue", high = "darkred") +
+    theme_minimal()
+  
+  ggsave(filename, p, width = 5, height = 4)
+}
+
+plot_cm(cm_test, "cm_mlr_test.png")
+
+mlflow_log_artifact("cm_mlr_test.png")
+
+```
+Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+
+```{r}
+saveRDS(mlr_model, "mlr_model.rds")
+mlflow_log_artifact("mlr_model.rds")
+
+```
+
+```{r}
+
+mlflow_end_run()
+
+```
+
+
+## Multinomijalna Logisticka Regresija sa redukovanim brojem prediktora  
+
+Koristicemo i model multinomijale logisticke regresije sa _avg_rating_ + _sentiment_ u MLFlow.
+Postupak je isti kao za prethodni model, samo se parametri razlikuju.
+
+```{r}
+mlflow_start_run()
+```
+
+Logujemo parametre vezane za model
+
+```{r}
+mlflow_log_param("model_type", "Multinomial_Logistic_Regresion")
+mlflow_log_param("predictors_count", 2)
+```
+
+Prvo cemo odraditi predikciju na trening i test skupu koristeci nas MLR REDUCED model
+
+```{r}
+
+pred_train = predict(mlr_model_reduced, newdata = train)
+pred_test = predict(mlr_model_reduced, newdata = test)
+```
+
+Zatim pravimo confision matrix za oba skupa 
+
+```{r}
+cm_train = confusionMatrix(pred_train, train$rating)
+cm_test = confusionMatrix(pred_test, test$rating)
+```
+
+Logovacemo metrike iz matrice konfuzije u MLFlow
+
+```{r}
+mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_train", cm_train$overall["Kappa"])
+
+mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
+```
+
+Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+
+```{r}
+
+plot_cm(cm_test, "cm_mlr_reduced_test.png")
+
+mlflow_log_artifact("cm_mlr_reduced_test.png")
+
+```
+Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+
+```{r}
+saveRDS(mlr_model_reduced, "mlr_model_reduced.rds")
+mlflow_log_artifact("mlr_model_reduced.rds")
+
+```
+
+```{r}
+
+mlflow_end_run()
 
 ```
 
 
 
+## Random Forest  
+
+
 ```{r}
+mlflow_start_run()
+```
+
+Logujemo parametre vezane za model
+
+```{r}
+mlflow_log_param("model_type", "Random Forest")
+mlflow_log_param("predictors_count", 6)
+mlflow_log_param("ntree", 300)
+mlflow_log_param("mtry", 3)
+
+```
+
+Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model
+
+```{r}
+pred_train = predict(rf_model, newdata = train)
+pred_test = predict(rf_model, newdata = test)
+```
+
+Zatim pravimo confision matrix za oba skupa 
+
+```{r}
+cm_train = confusionMatrix(pred_train, train$rating)
+cm_test = confusionMatrix(pred_test, test$rating)
+```
+
+Logovacemo metrike iz matrice konfuzije u MLFlow
+
+```{r}
+mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_train", cm_train$overall["Kappa"])
+
+mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
+```
+
+Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+
+```{r}
+
+plot_cm(cm_test, "cm_rf_test.png")
+
+mlflow_log_artifact("cm_rf_test.png")
+
+```
+Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+
+```{r}
+saveRDS(rf_model, "rf_model.rds")
+mlflow_log_artifact("rf_model.rds")
+
+```
+
+```{r}
+
+mlflow_end_run()
+
+```
+
+
+## Random Forest sa redukovanim brojem prediktora i ntree = 100  
+
+
+```{r}
+mlflow_start_run()
+```
+
+Logujemo parametre vezane za model
+
+```{r}
+mlflow_log_param("model_type", "Random Forest")
+mlflow_log_param("predictors_count", 2)
+mlflow_log_param("ntree", 100)
+mlflow_log_param("mtry", 2)
+
+```
+
+Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model sa smanjenim brojem prediktora
+
+```{r}
+pred_train = predict(rf_model_reduced, newdata = train)
+pred_test = predict(rf_model_reduced, newdata = test)
+```
+
+Zatim pravimo confision matrix za oba skupa 
+
+```{r}
+cm_train = confusionMatrix(pred_train, train$rating)
+cm_test = confusionMatrix(pred_test, test$rating)
+```
+
+Logovacemo metrike iz matrice konfuzije u MLFlow
+
+```{r}
+mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_train", cm_train$overall["Kappa"])
+
+mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
+```
+
+Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+
+```{r}
+
+plot_cm(cm_test, "cm_rf_reduced_test.png")
+
+mlflow_log_artifact("cm_rf_reduced_test.png")
+
+```
+Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+
+```{r}
+saveRDS(rf_model_reduced, "rf_model_reduced.rds")
+mlflow_log_artifact("rf_model_reduced.rds")
+
+```
+
+```{r}
+
+mlflow_end_run()
+
+```
+
+## Random Forest sa redukovanim brojem prediktora i ntree = 200  
+
+Napravicemo i Random Forest model sa vecim brojem stabala.
+Time povecavamo kompleksnost modela, ali moze da se desi da predvidjanje bude bolje.
+
+```{r}
+rf_model_reduced_2 = randomForest(rating ~ avg_rating + sentiment, data = train, ntree = 200, mtry = 2, importance = TRUE)
+```
+
+
+```{r}
+mlflow_start_run()
+```
+
+Logujemo parametre vezane za model
+
+```{r}
+mlflow_log_param("model_type", "Random Forest")
+mlflow_log_param("predictors_count", 2)
+mlflow_log_param("ntree", 200)
+mlflow_log_param("mtry", 2)
+
+```
+
+Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model sa smanjenim brojem prediktora
+
+```{r}
+pred_train = predict(rf_model_reduced_2, newdata = train)
+pred_test = predict(rf_model_reduced_2, newdata = test)
+```
+
+Zatim pravimo confision matrix za oba skupa 
+
+```{r}
+cm_train = confusionMatrix(pred_train, train$rating)
+cm_test = confusionMatrix(pred_test, test$rating)
+```
+
+Logovacemo metrike iz matrice konfuzije u MLFlow
+
+```{r}
+mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_train", cm_train$overall["Kappa"])
+
+mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
+```
+
+Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+
+```{r}
+
+plot_cm(cm_test, "cm_rf_reduced_2_test.png")
+
+mlflow_log_artifact("cm_rf_reduced_2_test.png")
+
+```
+Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+
+```{r}
+
+saveRDS(rf_model_reduced_2, "rf_model_reduced_2.rds")
+mlflow_log_artifact("rf_model_reduced_2.rds")
+
+```
+
+```{r}
+
+mlflow_end_run()
 
 ```
 
 
 
+
+## Support Vector Machine (SVM) Model  
+
+Prvo cemo logovati SVM model sa 6 prediktora koji smo ranije napravili.
+
 ```{r}
+mlflow_start_run()
+```
+
+Logujemo parametre vezane za model
+
+```{r}
+mlflow_log_param("model_type", "Support Vector Machine")
+mlflow_log_param("predictors_count", 6)
+mlflow_log_param("kernel", "radial")
+mlflow_log_param("cost", 1)
+mlflow_log_param("gama", 1/ncol(train))
+
+```
+
+Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model sa smanjenim brojem prediktora
+
+```{r}
+pred_train = predict(svm_model, newdata = train)
+pred_test = predict(svm_model, newdata = test)
+```
+
+Zatim pravimo confision matrix za oba skupa 
+
+```{r}
+cm_train = confusionMatrix(pred_train, train$rating)
+cm_test = confusionMatrix(pred_test, test$rating)
+```
+
+Logovacemo metrike iz matrice konfuzije u MLFlow
+
+```{r}
+mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_train", cm_train$overall["Kappa"])
+
+mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
+```
+
+Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+
+```{r}
+
+plot_cm(cm_test, "cm_svm_test.png")
+
+mlflow_log_artifact("cm_svm_test.png")
+
+```
+Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+
+```{r}
+
+saveRDS(svm_model, "svm_model.rds")
+mlflow_log_artifact("svm_model.rds")
+
+```
+
+```{r}
+
+mlflow_end_run()
 
 ```
 
 
 
+
+
+## Support Vector Machine (SVM) Model sa redukovanim brojem prediktora (sa _avg_rating_)  
+
+Logovacemo i SVM model sa 2 prediktora (avg_rating i sentiment)
+
 ```{r}
+mlflow_start_run()
+```
+
+Logujemo parametre vezane za model
+
+```{r}
+mlflow_log_param("model_type", "Support Vector Machine")
+mlflow_log_param("predictors_count", 2)
+mlflow_log_param("kernel", "radial")
+mlflow_log_param("cost", 10)
+mlflow_log_param("gama", 0.01)
 
 ```
 
+Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model sa smanjenim brojem prediktora
 
+```{r}
+pred_train = predict(svm_model_reduced, newdata = train)
+pred_test = predict(svm_model_reduced, newdata = test)
+```
 
+Zatim pravimo confision matrix za oba skupa 
+
+```{r}
+cm_train = confusionMatrix(pred_train, train$rating)
+cm_test = confusionMatrix(pred_test, test$rating)
+```
+
+Logovacemo metrike iz matrice konfuzije u MLFlow
+
+```{r}
+mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_train", cm_train$overall["Kappa"])
+
+mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
+mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
+```
+
+Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
 
 ```{r}
 
+plot_cm(cm_test, "cm_svm_reduced_test.png")
+
+mlflow_log_artifact("cm_svm_reduced_test.png")
+
 ```
-
-
+Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
 
 ```{r}
 
+saveRDS(svm_model_reduced, "svm_model_reduced.rds")
+mlflow_log_artifact("svm_model_reduced.rds")
+
 ```
+
+```{r}
+
+mlflow_end_run()
+
+```
+
+## Koriscenje najboljeg modela  
+
+Nakon sto smo u MLFlow UI-u odabrali koji je najbolji model, mozemo ga ucitati sa MLFlow servera za dalje koriscenje.
+Dakle, koristimo .rds artefakt koji je vezan za najbolji model ranije u nasem radu.
+
+```{r}
+
+best_model = readRDS("mlr_model_reduced.rds")
+pred = predict(best_model, newdata = test)
+
+cm_best_model = confusionMatrix(pred, test$rating)
+
+cm_best_model
+```
+Zakljucno sa ovim mozemo reci da smo iskoristili MLFlow server za bolju organizaciju modela i laksi odabir najboljeg.
+
 
 
 
