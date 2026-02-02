@@ -10,14 +10,14 @@ date: "2025-11-22"
 # Analiza skupa podataka: Global Mobile Review Dataset
 
 ## Opis problema
-Skup podataka **_Global Mobile Review_** sadrzi podatke o mobilnim uredjajima i ocenama korisnika za svaki pojedinacni model. Ovaj skup podataka preuzet je sa sajta _kaggle.com_.
+Skup podataka **_Global Mobile Review_** sadrži podatke o mobilnim uređajima i ocenama korisnika za svaki pojedinačni model. Ovaj skup podataka preuzet je sa sajta _kaggle.com_.
 
 Glavni cilj analize jeste da predvidi krajnju ocenu korisnika, vrednost od 1 do 5, na osnovu prisutnih podataka.
 
 Programski jezik koji ce se koristiti za dalju analizu je R.
 
-## Ucitavanje biblioteka za obradu podataka
-Kako bismo poceli sa analizom skupa podataka, potrebno je najpre ucitati biblioteke sa kojima cemo dalje raditi. 
+## Učitavanje biblioteka za obradu podataka
+Kako bismo počeli sa analizom skupa podataka, potrebno je najpre učitati biblioteke sa kojima ćemo dalje raditi. 
 
 ```{r}
 library(tidyverse)
@@ -32,8 +32,8 @@ library(rpart)
 library(xgboost)
 ```
 
-## Ucitavanje skupa podataka
-Prvi korak u analizi jeste da ucitamo skup podataka. 
+## Učitavanje skupa podataka
+Prvi korak u analizi jeste da učitamo skup podataka. 
 
 Skup podataka se nalazi u CSV formatu, a sam naziv fajla je **_Mobile_Reviews_Sentiment.csv_**.
 
@@ -41,38 +41,38 @@ Skup podataka se nalazi u CSV formatu, a sam naziv fajla je **_Mobile_Reviews_Se
 reviews = read.csv("Mobile_Reviews_Sentiment.csv", stringsAsFactors = FALSE)
 ```
 
-Nakon ucitavanja, pogledacemo sa kojom kolicinom podataka raspolazemo kako bismo u daljem radu mogli adekvatno da planiramo podelu skupa podataka na trening i test skup.
+Nakon učitavanja, pogledaćemo sa kojom količinom podataka raspolažemo kako bismo u daljem radu mogli adekvatno da planiramo podelu skupa podataka na trening i test skup.
 
-Skup podataka sastoji se od 50 000 redova, odnosno u nasem slucaju pojedinacnih ocena za uredjaje, kao i 25 kolona od kojih je jedna ciljna promenljiva.
+Skup podataka sastoji se od 50 000 redova, odnosno u našem slučaju pojedinačnih ocena za uređaje, kao i 25 kolona od kojih je jedna ciljna promenljiva.
 ```{r}
 dim(reviews)
 ```
 
-Sada, kada je skup podataka ucitan, mozemo pogledati strukturu njegovih podataka, odnosno kolona.
+Sada, kada je skup podataka učitan, možemo pogledati strukturu njegovih podataka, odnosno kolona.
 
-Mozemo primetiti da je struktura podataka uglavnom kategorijska. Iako vidimo podjednak broj numerickih vrednosti, kao sto su _camera_rating_, _performance_rating_ i slicno, te promenljive verovatno imaju vrednost od 1 – 5 i u daljem radu ce biti posmatrane kao kategorijske ukoliko nam ne bude drugacije bilo potrebno za obradu.
+Možemo primetiti da je struktura podataka uglavnom kategorijska. Iako vidimo podjednak broj numeričkih vrednosti, kao što su _camera_rating_, _performance_rating_ i slično, te promenljive verovatno imaju vrednost od 1 – 5 i u daljem radu će biti posmatrane kao kategorijske ukoliko nam ne bude drugačije bilo potrebno za obradu.
 
-Prave numericke vrednosti se mogu primetiti kod promenljivih _price_usd_, _exchange_rate_to_usd_, kao i trenutno kategorijska promenljiva _price_local_. Ova promenljiva je trenutno kategorijskog tipa zbog specijalnih karaktera koje mozemo primetiti na pocetku i na kraju koji predstavljaju oznaku domace valute i to ce najverovatnije u buducem radu biti uklonjeno radi lakse obrade podatak
+Prave numeričke vrednosti se mogu primetiti kod promenljivih _price_usd_, _exchange_rate_to_usd_, kao i trenutno kategorijska promenljiva _price_local_. Ova promenljiva je trenutno kategorijskog tipa zbog specijalnih karaktera koje možemo primetiti na početku i na kraju koji predstavljaju oznaku domaće valute i to će najverovatnije u budućem radu biti uklonjeno radi lakse obrade podataka
 ```{r}
 str(reviews)
 ```
 
-Dodatno, mozemo pogledati i detaljniju strukturu podataka: da li ima nedostajucih vrednosti, koji je maksimum/minimum numerickih vrednosti i slicno.
+Dodatno, možemo pogledati i detaljniju strukturu podataka: da li ima nedostajućih vrednosti, koji je maksimum/minimum numeričkih vrednosti i slično.
 
-Ono sto mozemo primetiti je da nema nedostajucih vrednosti na prvi pogled, mada ce za kategorijske promenljive biti potrebna dodatna provera. Prazan string se ovde nece smatrati nedostajucom vrednoscu, ali logicki on to jeste.
+Ono što možemo primetiti je da nema nedostajućih vrednosti na prvi pogled, mada će za kategorijske promenljive biti potrebna dodatna provera. Prazan string se ovde neće smatrati nedostajućom vrednošću, ali logički on to jeste.
 
-Svaka promenljiva ce biti pojedinacno objasnjena u nastavku.
+Svaka promenljiva će biti pojedinacno objasnjena u nastavku.
 ```{r}
 summary(reviews)
 ```
 
-## Opis i analiza pojedinacnih promenljivih
-Kako bismo stekli uvid u strukturu, raspodelu i znacenje svake promenljive, detaljno cemo proci kroz skup podataka i analizirati svaku pojedinacno uz pojasnjenje sta svaka od njih predstavlja, odnosno opisuje. Na ovaj nacin cemo videti i da li promenljive imaju nedostajuce vrednosti i odluciti sta da uradimo sa njima ukoliko postoje.
+## Opis i analiza pojedinačnih promenljivih
+Kako bismo stekli uvid u strukturu, raspodelu i značenje svake promenljive, detaljno ćemo proći kroz skup podataka i analizirati svaku pojedinačno uz pojašnjenje šta svaka od njih predstavlja, odnosno opisuje. Na ovaj način ćemo videti i da li promenljive imaju nedostajuće vrednosti i odlučiti šta da uradimo sa njima ukoliko postoje.
 
 ### review_id
-Ova promenljiva predstavlja jedinstveni identifikator svakog reda u skupu podataka, odnosno jedinstveni identifikator svake pojedinacne ocene.
+Ova promenljiva predstavlja jedinstveni identifikator svakog reda u skupu podataka, odnosno jedinstveni identifikator svake pojedinačne ocene.
 
-Mozemo videti da se identifikatori krecu u intervalu od 1 do 50 000 (ukljucujuci ove vrednosti) sto odgovara ukupnoj kolicini podataka koju imamo.
+Možemo videti da se identifikatori kreću u intervalu od 1 do 50 000 (uključujući ove vrednosti) što odgovara ukupnoj količini podataka koju imamo.
 ```{r}
 summary(reviews$review_id)
 ```
@@ -80,24 +80,24 @@ summary(reviews$review_id)
 ### customer_name
 Ime osobe koja ostavlja ocenu.
 
-Iako logicki mozemo pretpostaviti da ova promenljiva nema velikog znacaja na konacnu ocenu samog proizvoda, mozemo proveriti da li ima nedostajucih vrednosti. Posto je ovo kategorijska promenljiva tipa String, provericemo da li prazan String kao svoju vrednost.
+Iako logički možemo pretpostaviti da ova promenljiva nema velikog znacaja na konačnu ocenu samog proizvoda, možemo proveriti da li ima nedostajućih vrednosti. Posto je ovo kategorijska promenljiva tipa String, proverićemo da li prazan String kao svoju vrednost.
 
-Na osnovu rezultata komande ispod mozemo videti da ova kolona nema "skrivene" nedostajuce vrednosti
+Na osnovu rezultata komande ispod možemo videti da ova kolona nema "skrivene" nedostajuće vrednosti
 
 ```{r}
 sum(reviews[reviews$customer_name == ""])
 ```
 
 ### age
-Godine su numericka vrednost koja predstavlja koliko osoba koja je ostavila ocenu ima godina.
+Godine su numerička vrednost koja predstavlja koliko osoba koja je ostavila ocenu ima godina.
 
-Minimum godina koje osoba ima u nasem skupu podataka je 18 - sto znaci da su sve ispitane osobe punoletne, dok je maksimalan broj godina 65.
+Minimum godina koje osoba ima u našem skupu podataka je 18 - što znači da su sve ispitane osobe punoletne, dok je maksimalan broj godina 65.
 
 ```{r}
 summary(reviews$age)
 ```
 
-Na osnovu grafika ispod - koji oznacava raspodelu vrednosti same promenljive, mozemo videti da su najveci broj ocena ostavili mladi od 18 - 22 godine, zatim osobe srednjih godina i najmanje starije osobe - iznad 50 godina. Mozemo reci da je ovo i ocekivano, uzimajuci u obzir da mladje generacije mnogo vise koriste mobilne uredjaje.
+Na osnovu grafika ispod - koji označava raspodelu vrednosti same promenljive, možemo videti da su najveći broj ocena ostavili mladi od 18 - 22 godine, zatim osobe srednjih godina i najmanje starije osobe - iznad 50 godina. možemo reći da je ovo i očekivano, uzimajući u obzir da mlađe generacije mnogo više koriste mobilne uređaje.
 
 ```{r}
 ggplot(reviews, aes(x = age)) + 
@@ -105,27 +105,27 @@ ggplot(reviews, aes(x = age)) +
 ```
 
 ### brand
-Promenljiva koja oznacava brend, odnosno proizvodjaca samog uredjaja (na primer Apple, Sumsung...).
+Promenljiva koja označava brend, odnosno proizvođaca samog uređaja (na primer Apple, Sumsung...).
 
-Ovaj skup podataka razlikuje 7 proizvodjaca mobilnih uredjaja kao sto se moze videti u tabeli ispod.
+Ovaj skup podataka razlikuje 7 proizvođača mobilnih uređaja kao sto se može videti u tabeli ispod.
 
-Dodatno, na osnovu vrednosti koja predstavlja broj pojavljivanja proizvodjaca, mozemo potvrditi da je ucestalost gotovo podjednaka.
+Dodatno, na osnovu vrednosti koja predstavlja broj pojavljivanja proizvođača, možemo potvrditi da je učestalost gotovo podjednaka.
 
 ```{r}
 table(reviews$brand)
 ```
 
-Vizuelni prikaz ce jos adekvatnije prikazati podjednaku zastupljenost svih 7 proizvodjaca u nasem skupu podataka. 
+Vizuelni prikaz će još adekvatnije prikazati podjednaku zastupljenost svih 7 proizvođača u našem skupu podataka. 
 
 ```{r}
 ggplot(reviews, aes(x = brand)) + 
   geom_bar(fill = "tomato", color = "black") +
-  labs(title = "Graficki prikaz broja pojavljivanja brenda u skupu podataka",
+  labs(title = "Grafički prikaz broja pojavljivanja brenda u skupu podataka",
        x = "Naziv brenda", 
        y = "Ime pojavljivanja")
 ```
 
-Po svojoj prirodi, ovo je kategorijska promenljiva i ima ogranicen broj kategorija, tako da cemo je pretvoriti u faktorsku (kategorijsku) promenlju radi dalje obrade. 
+Po svojoj prirodi, ovo je kategorijska promenljiva i ima ograničen broj kategorija, tako da ćemo je pretvoriti u faktorsku (kategorijsku) promenlju radi dalje obrade. 
 
 ```{r}
 reviews$brand = factor(reviews$brand)
@@ -133,73 +133,73 @@ reviews$brand = factor(reviews$brand)
 
 
 ### model
-Usko povezan sa prethodnom promenljivom, model, kao sto i samo ime kaze, predstavlja model samog uredjaja.
+Usko povezan sa prethodnom promenljivom, model, kao što i samo ime kaže, predstavlja model samog uređaja.
 
-U tabeli ispod mozemo videti koji modeli su kupovani i ocenjivani u nasem skupu podataka.
+U tabeli ispod možemo videti koji modeli su kupovani i ocenjivani u našem skupu podataka.
 
-Posto ima relativno veliki broj kategorija, najbolje je njihovu zastupljenost predstaviti koriscenjem grafika.
+Pošto ima relativno veliki broj kategorija, najbolje je njihovu zastupljenost predstaviti korišćenjem grafika.
 
 ```{r}
 table(reviews$model)
 ```
 
-Na grafickom prikazu je mnogo lakse uociti isticanje dva modela u broju pojavljivanja, a to su: Realme 12 Pro i Realme Narzo 70
+Na grafičkom prikazu je mnogo lakše uočiti isticanje dva modela u broju pojavljivanja, a to su: Realme 12 Pro i Realme Narzo 70
 
 ```{r}
 ggplot(reviews, aes(x = model)) +
   geom_bar(fill = "tomato", color = "black") + 
   theme_minimal() + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-  labs(title = "Graficki prikaz zastupljenosti modela u skupu podataka",
+  labs(title = "Grafički prikaz zastupljenosti modela u skupu podataka",
        x = "Ime modela", 
        y = "Broj pojavljivanja")
   
 ```
 
-Kao sto smo imali situaciju sa brendom, i ova promenljiva je po svojoj prirodi kategorijska, tako da cemo je u nju i pretvoriti.
+Kao što smo imali situaciju sa brendom, i ova promenljiva je po svojoj prirodi kategorijska, tako da ćemo je u nju i pretvoriti.
 
 ```{r}
 reviews$model = factor(reviews$model)
 ```
 
 ### price_usd
-Cena pojedinacnog uredjaja u americkim dolarima.
+Cena pojedinačnog uređaja u američkim dolarima.
 
-Ova promenljiva je kontinualna numericka vrednost iz intervala [180, 1500). 
+Ova promenljiva je kontinualna numerička vrednost iz intervala [180, 1500). 
 
 ```{r}
 summary(reviews$price_usd)
 ```
 
 Predstavimo raspodelu cena grafikom. 
-Na grafiku primecujemo da najvise ima cena u raponu od 500 - 700 USD, sto je negde prosecna cena telefona.  
+Na grafiku primećujemo da najviše ima cena u raponu od 500 - 700 USD, što je negde prosečna cena telefona.  
 ```{r}
 ggplot(reviews, aes(x = price_usd)) + 
   geom_density(fill = "tomato", alpha = 0.5) +
-  labs(title = "Gravicki prikaz raspodele cena u USD", 
+  labs(title = "Grafički prikaz raspodele cena u USD", 
        x = "Cena u USD",
-       Y = "Ucestalost")
+       Y = "Učestalost")
 
 ```
 
 ### price_local
-Cena pojedinacnog uredjaja izrazena u lokalnog valuti.
+Cena pojedinačnog uređaja izražena u lokalnoj valuti.
 
-Mozemo primetiti da je ova promenljiva, iako je logicno da bude numericka, predstavljena kao kategorijska. Pogledajmo kako izgledaju vrednosti unutar ove kolone.
+Možemo primetiti da je ova promenljiva, iako je logično da bude numerička, predstavljena kao kategorijska. Pogledajmo kako izgledaju vrednosti unutar ove kolone.
 
 ```{r}
 summary(reviews$price_local)
 ```
-Razlog sto je ova promenljiva oznacena kao kategorijska su specijalni karakteri koji predstavljaju oznaku lokalne valute.
+Razlog što je ova promenljiva označena kao kategorijska su specijalni karakteri koji predstavljaju oznaku lokalne valute.
 
 Ovi specijalni karakteri nalaze se i na pocetku i na kraju vrednosti. 
 ```{r}
 head(reviews$price_local)
 ```
 
-Kako bismo mogli da obradjujemo ovu kolonu adekvatno u daljem radu, potrebno je da uklonimo specijalne karaktere i pretvorimo je u numericku.
+Kako bismo mogli da obrađujemo ovu kolonu adekvatno u daljem radu, potrebno je da uklonimo specijalne karaktere i pretvorimo je u numeričku.
 
-Najpre cemo kreirati funkcije koje ce ukloniti specijalne karaktere koji se nalaze na pocetku i/ili kraju vrednosti.
+Najpre ćemo kreirati funkcije koje ce ukloniti specijalne karaktere koji se nalaze na pocetku i/ili kraju vrednosti.
 ```{r}
 remove_from_start <- function(x) {
   gsub("^[^0-9]*", "", x)
@@ -211,7 +211,7 @@ remove_from_end <- function(x) {
 
 ```
 
-Sada cemo kreirane funkcije za uklanjanje specijalnih karaktera sa pocetka i kraja vrednosti da primenimo nad celom kolonom.
+Sada ćemo kreirane funkcije za uklanjanje specijalnih karaktera sa početka i kraja vrednosti da primenimo nad celom kolonom.
 
 ```{r}
 
@@ -220,26 +220,26 @@ reviews$price_local = remove_from_end(reviews$price_local)
 
 ```
 
-Mozemo videti da sada nemamo specijalne karaktere na pocetku ili kraju, vec da su ostale samo brojcane vrednosti.
+Možemo videti da sada nemamo specijalne karaktere na početku ili kraju, već da su ostale samo brojčane vrednosti.
 
 ```{r}
 head(reviews$price_local)
 ```
 
-Sada je trenutak da te vrednosti pretvorimo u numericke. 
+Sada je trenutak da te vrednosti pretvorimo u numeričke. 
 
 ```{r}
 reviews$price_local = as.numeric(reviews$price_local)
 ```
 
 ### currency
-Valuta u kojoj je izrazen iznos u price_local.
+Valuta u kojoj je izražen iznos u price_local.
 
-Ovo je kategorijska promenljiva koja nam ne govori samo o valuti, nego i o zemlji iz koje pojedinac dolazi. Ovaj podatak mozda bude imao znacaja u buducnosti.
+Ovo je kategorijska promenljiva koja nam ne govori samo o valuti, nego i o zemlji iz koje pojedinac dolazi. Ovaj podatak možda bude imao značaja u budućnosti.
 
-Preko tabele cemo pogledati koje kategorije su zastupljene i da li postoje nedostajuce vrednosti u vidu praznog stringa.
+Preko tabele ćemo pogledati koje kategorije su zastupljene i da li postoje nedostajuće vrednosti u vidu praznog stringa.
 
-Mozemo primetiti 8 valuta i 8 zemalja:
+možemo primetiti 8 valuta i 8 zemalja:
 
 - AED -> Ujedinjeni Arapski Emirati Dirham
 - AUD -> Australijski dolar
@@ -248,51 +248,51 @@ Mozemo primetiti 8 valuta i 8 zemalja:
 - EUR -> Euro
 - GBP -> Britanska funta
 - INR -> Indijska ruplja
-- USD -> Americki dolar 
+- USD -> Američki dolar 
 
 ```{r}
 table(reviews$currency)
 ```
 
-Po brojevima iz tabele mozemo zakljuciti da se u skupu podataka nalazi podjednak broj ispitanika po zemljama koje koriste ovu valutu, ali hajde da to potvrdimo i grafickim prikazom.
+Po brojevima iz tabele možemo zaključiti da se u skupu podataka nalazi podjednak broj ispitanika po zemljama koje koriste ovu valutu, ali hajde da to potvrdimo i grafičkim prikazom.
 
 ```{r}
 ggplot(reviews, aes(x = currency)) + 
   geom_bar(fill = "tomato", color = "black") + 
   theme_minimal() + 
-  labs(title = "Graficki prikaz broja pojavljivanja lokalnih valuta", 
+  labs(title = "Grafički prikaz broja pojavljivanja lokalnih valuta", 
        x = "Lokalna valuta", 
        y = "Broj pojavljivanja")
 ```
 
-Ova promenljiva je kategorijskog tipa, pa cemo je stoga i pretvoriti u faktorsku promenljivu.
+Ova promenljiva je kategorijskog tipa, pa ćemo je stoga i pretvoriti u faktorsku promenljivu.
 
 ```{r}
 reviews$currency = factor(reviews$currency)
 ```
 
 ### exchange_rate_to_usd     
-Ova promenljiva predstavlja kurs lokalne valute izrazene u americkim dolarima - USD.
+Ova promenljiva predstavlja kurs lokalne valute izražene u američkim dolarima - USD.
 
 ```{r}
 summary(reviews$exchange_rate_to_usd)
 ```
 
-Posto je ovo kurs lokalne valute izrazen u americkim dolarima, potrebno je da ima jedinstvenih vrednosti koliko i lokalnih valuta. U ovom slucaju to je 8.
+Pošto je ovo kurs lokalne valute izražen u američkim dolarima, potrebno je da ima jedinstvenih vrednosti koliko i lokalnih valuta. U ovom slučaju to je 8.
 
-Pomocu komande ispod mozemo potvrditi da svaka valuta ima tacno jedan kurs sto doprinosi konzistentnosti u skupu podataka
+Pomoću komande ispod možemo potvrditi da svaka valuta ima tačno jedan kurs što doprinosi konzistentnosti u skupu podataka
 
 ```{r}
 length(unique(reviews$exchange_rate_to_usd))
 ```
 
-Dodatno, potrebno je proveriti koja vrednost odgovara kojoj valuti. Ovo je korisno da bi se uporedila tacnost.
+Dodatno, potrebno je proveriti koja vrednost odgovara kojoj valuti. Ovo je korisno da bi se uporedila tačnost.
 
 Na primer, kurs za prebacivanje USD u USD treba biti 1 tj. da se vrednosti preslikavaju.
 
-Hajde da to proverimo sledeceom tablicom.
+Hajde da to proverimo sledećom tablicom.
 
-Odlicno, mozemo videti tablicu vrednosti i potvrditi da je tacna
+Odlično, možemo videti tablicu vrednosti i potvrditi da je tačna
 
 ```{r}
 reviews %>%
@@ -301,27 +301,27 @@ reviews %>%
 ```
 
 ### rating
-Ovo je kategorijska promenljiva koja oznacava stepen zadovoljstva odnosno samu ocenu uredjaja. Ovo je ujedno i ciljna promenljiva u ovom skupu podataka.
+Ovo je kategorijska promenljiva koja označava stepen zadovoljstva odnosno samu ocenu uređaja. Ovo je ujedno i ciljna promenljiva u ovom skupu podataka.
 
-Vrednosti unutar ove promenljive krecu se od 1 do 5, sto znaci da je 1 minimalna ocena koju je moguce dodeliti, a 5 najvisa ocena za pojedinacni uredjaj.
+Vrednosti unutar ove promenljive kreću se od 1 do 5, što znaci da je 1 minimalna ocena koju je moguće dodeliti, a 5 najviša ocena za pojedinačni uređaj.
 
 ```{r}
 table(reviews$rating)
 ```
 
-Na osnovu grafika prikazanog ispod mozemo zakljuciti da najmanje ima uredjaja kojima je osoba prezadovoljna ili u potpunosti nezadovoljna. Najvise osoba uredjaj je ocenilo srednjim ocenama - 3 i 4. 
+Na osnovu grafika prikazanog ispod možemo zaključiti da najmanje ima uređaja kojima je osoba prezadovoljna ili u potpunosti nezadovoljna. Najviše osoba uređaj je ocenilo srednjim ocenama - 3 i 4. 
 
 ```{r}
 ggplot(reviews, aes(x = rating)) + 
   geom_bar(fill = "tomato", fill = "black") + 
   theme_minimal() + 
-  labs(title = "Graficki prikaz ocena i broja pojavljivanja", 
+  labs(title = "Grafički prikaz ocena i broja pojavljivanja", 
        x = "Ocena",
        y = "Broj pojavljivanja")
 ```
 
 ### review_text
-Komentar za sam review o zadovoljstvu uredjajem.
+Komentar za sam review o zadovoljstvu uređajem.
 
 Ovo je String promenljiva, nije kategorijska
 ```{r}
@@ -329,17 +329,17 @@ summary(reviews$review_text)
 ```
 
 ### sentiment
-Kategorijska promenljiva koja oznacava da li je u globalu osoba zadovoljna uredjajem ili ne.
+Kategorijska promenljiva koja označava da li je u globalu osoba zadovoljna uređajem ili ne.
 
 Ovo je kategorijska promenljiva sa tri vrednosti: 
-- Negative (osoba nije zadovoljna uredjajem)
-- Neutral (osoba je neutralna po pitanju izjasnjavanja o zadovoljstvu uredjajem)
-- Positive (osoba je zadovoljna uredjajem)
+- Negative (osoba nije zadovoljna uređajem)
+- Neutral (osoba je neutralna po pitanju izjašnjavanja o zadovoljstvu uređajem)
+- Positive (osoba je zadovoljna uređajem)
 ```{r}
 table(reviews$sentiment)
 ```
 
-Mozemo videti da je najveci broj korisnika zadovoljan izborom uredjaja, sto se slaze sa vrednostima promenljive rating gde je vecina korisnika ocenila uredjaj ocenama od 3 - 5.
+možemo videti da je najveći broj korisnika zadovoljan izborom uređaja, što se slaže sa vrednostima promenljive rating gde je većina korisnika ocenila uređaj ocenama od 3 - 5.
 
 ```{r}
 ggplot(reviews, aes(x = sentiment)) + 
@@ -348,32 +348,32 @@ ggplot(reviews, aes(x = sentiment)) +
 ```
 
 ### country
-Predstavlja zemlju iz koje dolazi osoba koja ocenjuje uredjaj.
+Predstavlja zemlju iz koje dolazi osoba koja ocenjuje uređaj.
 
-Iako se neke valute koriste u vise drzava (na primer EUR) mozemo videti da broj zemalja odgovara broju valuta.
+Iako se neke valute koriste u više drzava (na primer EUR) možemo videti da broj zemalja odgovara broju valuta.
 
-Mozemo primetiti da je podjednak broj review-a iz ovih zemalja, sa neznatnim isticanjem Brazila i USA-a.
+možemo primetiti da je podjednak broj review-a iz ovih zemalja, sa neznatnim isticanjem Brazila i USA-a.
 
 ```{r}
 table(reviews$country)
 ```
 
-I ovu promenljivu cemo pretvoriti u kategorijsku:
+I ovu promenljivu ćemo pretvoriti u kategorijsku:
 
 ```{r}
 reviews$country = factor(reviews$country)
 ```
 
 ### language
-Ovo je jos jedna promenljiva vezana za samog korisnika i predstavlja jezik kojim osoba govori.
+Ovo je još jedna promenljiva vezana za samog korisnika i predstavlja jezik kojim osoba govori.
 
-Najveci broj ispitanika govori engleskim jezikom sto je ocekivano obzirom da imamo cak 4 zemlje (sto je polovina u nasem skupu podataka) gde je engleski jezik zvanicni jezik: UK, USA, Autralija i deo Kanade. 
+Najveci broj ispitanika govori engleskim jezikom što je očekivano obzirom da imamo čak 4 zemlje (što je polovina u našem skupu podataka) gde je engleski jezik zvanični jezik: UK, USA, Autralija i deo Kanade. 
 
 ```{r}
 table(reviews$language)
 ```
 
-Pretvoricemo ovu promenljivu u kategorijsku:
+Pretvorićemo ovu promenljivu u kategorijsku:
 
 ```{r}
 reviews$language = factor(reviews$language)
@@ -381,14 +381,14 @@ reviews$language = factor(reviews$language)
 
 
 ### review_date
-Datum ostavljanja review-a za uredjaj. 
+Datum ostavljanja review-a za uređaj. 
 
 ### verified_purchace
-Ova promenljiva nam moze biti zanimljiva u buducnosti zato sto predstavlja True/False tip promenljiva koja objasnjava da li je kupovina uredjaja verifikovana ili ne.
+Ova promenljiva nam može biti zanimljiva u budućnosti zato što predstavlja True/False tip promenljiva koja objašnjava da li je kupovina uređaja verifikovana ili ne.
 
-Mozemo videti da je 1/5 ocena sa neverifikovanom ili nepotvrdjenom kupovinom.
+možemo videti da je 1/5 ocena sa neverifikovanom ili nepotvrđenom kupovinom.
 
-U nastavku cemo posebnu paznju posvetiti ovoj promenljivoj i razmotriti da li treba uzimati u obzir ocene koje nisu verifikovane. Da li neverifikovane kupovine treba smatrati za outlier-e ukoliko ocena odskace od ostatka za taj uredjaj?
+U nastavku ćemo posebnu pažnju posvetiti ovoj promenljivoj i razmotriti da li treba uzimati u obzir ocene koje nisu verifikovane. Da li neverifikovane kupovine treba smatrati za outlier-e ukoliko ocena odskače od ostatka za taj uređaj?
 
 Ovo su sve pitanja na koja je potrebno odgovoriti u nastavku. 
 ```{r}
@@ -402,23 +402,23 @@ reviews$verified_purchase = factor(reviews$verified_purchase)
 ```
 
 ### batery_life_rating
-Korisnikova ocena zivotnog ciklusa baterije samog uredjaja. 
+Korisnikova ocena životnog ciklusa baterije samog uređaja. 
 
-Na osnovu tabele ispod mozemo zakljuciti da najveci broj korisnika nije zadovoljan onim sto baterija ocenjivanog uredjaja pruza.
+Na osnovu tabele ispod možemo zaključiti da najveći broj korisnika nije zadovoljan onim što baterija ocenjivanog uređaja pruža.
 ```{r}
 table(reviews$battery_life_rating)
 ```
 
 ### camera_rating
-Ocena kamere uredjaja. 
+Ocena kamere uređaja. 
 
-Slicna situacija kao i sa ocenom baterije, najveci broj ispitanika nije bio preterano zadovoljan onim sto kamera pruza. 
+Slična situacija kao i sa ocenom baterije, najveći broj ispitanika nije bio preterano zadovoljan onim što kamera pruža. 
 
 ```{r}
 table(reviews$camera_rating)
 ```
 
-Odnos izmedju ocena mozemo jos jasnije predstaviti grafikom.  
+Odnos između ocena možemo još jasnije predstaviti grafikom.  
 
 ```{r}
 ggplot(reviews, aes(x = camera_rating)) + 
@@ -426,22 +426,22 @@ ggplot(reviews, aes(x = camera_rating)) +
 ```
 
 ### performance_rating
-Ocena performansi uredjaja. Ovde spadaju brzina uredjaja i slicno. 
+Ocena performansi uređaja. Ovde spadaju brzina uređaja i slicno. 
 
-I ovde je situacija gotovo identicna, mali broj ljudi je prezadovoljan performansama uredjaja.
+I ovde je situacija gotovo identična, mali broj ljudi je prezadovoljan performansama uređaja.
 ```{r}
 table(reviews$performance_rating)
 ```
 
 ### design_rating
-Ocena vezana za izgled samog uredjaja – dimenzije, pozicija kamera, oblik i slicne karakteristike. 
-Gotovo identicna situacija kao i sa prethodnim parametrima.  
+Ocena vezana za izgled samog uređaja – dimenzije, pozicija kamera, oblik i slične karakteristike. 
+Gotovo identična situacija kao i sa prethodnim parametrima.  
 ```{r}
 table(reviews$design_rating)
 ```
 
 ### display_rating
-Ocena ekrana uredjaja – velicina ekrana, jacina boja, ostrina, zaobljenost ivica i slicno. 
+Ocena ekrana uređaja – veličina ekrana, jačina boja, oštrina, zaobljenost ivica i slično. 
 
 ```{r}
 table(reviews$display_rating)
@@ -450,18 +450,18 @@ table(reviews$display_rating)
 ### review_length i word_count
 Ove dve promenljive opisujemo zajedno jer se odnose na promenljivu review_text i predstavljaju neku vrstu metadata podataka – podaci koji opisuju karakteristike same promenljive.  
 
-romenljiva review_length odnosi se na duzinu teksta – broj karaktera, dok promenljiva word_count predstavlja broj reci upotrebljenih u review-u. 
+Promenljiva review_length odnosi se na dužinu teksta – broj karaktera, dok promenljiva word_count predstavlja broj reči upotrebljenih u review-u. 
 
 ### helpful_votes
-Ovo je promenljiva koja oznacava koliko korisnika, koji su procitali ovaj komentar odnosno samu ocenu, smatra istu korisnom. 
+Ovo je promenljiva koja označava koliko korisnika, koji su pročitali ovaj komentar odnosno samu ocenu, smatra istu korisnom. 
 
-Mozemo videti da broj glasova ide od 0 do 17, ali da najvise ima onih sa 2 – 5 glasa.
+možemo videti da broj glasova ide od 0 do 17, ali da najviše ima onih sa 2 – 5 glasova.
 
 ```{r}
 summary(reviews$helpful_votes)
 ```
 
-Jos bolji prikaz raspodele mozemo videti na grafiku ispod. Jako mali broj recenzija ima veliki broj glasova, najcesce je da recenzija ima od 2 do 5 glasa.
+Još bolji prikaz raspodele možemo videti na grafiku ispod. Jako mali broj recenzija ima veliki broj glasova, najčešće je da recenzija ima od 2 do 5 glasova.
 
 ```{r}
 ggplot(reviews, aes(x = helpful_votes)) +
@@ -470,14 +470,14 @@ ggplot(reviews, aes(x = helpful_votes)) +
 ```
 
 ### source
-Ovo je izvor, odnosno mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen jer se review najcesce ostavlja upravo na toj platformi.
+Ovo je izvor, odnosno mesto gde je komentar ostavljen, a ujedno može predstavljati i platformu sa koje je proizvod kupljen jer se review najčešće ostavlja upravo na toj platformi.
 
-Mozemo videti da ukupno imamo pet platformi i da je broj kupovina priblizan za svaku. 
+možemo videti da ukupno imamo pet platformi i da je broj kupovina približan za svaku. 
 ```{r}
 table(reviews$source)
 ```
 
-Ovu promenljivu cemo pretvoriti u faktorsku jer je po svojoj prirodi kategorijska i sastoji se od 5 kategorija:
+Ovu promenljivu ćemo pretvoriti u faktorsku jer je po svojoj prirodi kategorijska i sastoji se od 5 kategorija:
 - AliExpress
 - Amazon
 - BestBuy
@@ -489,79 +489,79 @@ reviews$source = factor(reviews$source)
 ```
 
 ## Provera ispravnosti price_usd
-Posto imam promenljive price_local i exchange_rate_to_usd, korisno je pogledati da li su sve vrednosti unutar price_usd odgovarajuce, tj. da li je konverzija ispravno odradjena. 
+Pošto imam promenljive price_local i exchange_rate_to_usd, korisno je pogledati da li su sve vrednosti unutar price_usd odgovarajuće, tj. da li je konverzija ispravno odrađena. 
 
-Ovo je bitno radi dalje obrade podataka za slucaj da odlucimo da gledamo samo ovu promenljivu kao cenu koja je na istoj skali za sve redove. 
+Ovo je bitno radi dalje obrade podataka za slučaj da odlučimo da gledamo samo ovu promenljivu kao cenu koja je na istoj skali za sve redove. 
 
-To cemo uraditi jednostavnim deljenjem price_local i exchange_rate_to_usd i proverom da li vrednost odgovara price_usd. 
+To ćemo uraditi jednostavnim deljenjem price_local i exchange_rate_to_usd i proverom da li vrednost odgovara price_usd. 
 
 ```{r}
 reviews$custom_price_usd = round(reviews$price_local / reviews$exchange_rate_to_usd, 2)
 ```
 
-Prikazimo prvih nekoliko elemenata, kako bismo videli da li je konverzija prosla kako treba. 
+Prikažimo prvih nekoliko elemenata, kako bismo videli da li je konverzija prošla kako treba. 
 
 ```{r}
 reviews[, c("price_usd", "custom_price_usd", "price_local", "currency", "exchange_rate_to_usd")]
 
 ```
-Pogledajmo ukupno koliko vrednosti u price_usd je tacno.  
+Pogledajmo ukupno koliko vrednosti u price_usd je tačno.  
 
-Vidimo da je cak 48 000 tacno, sto znaci da imamo samo 2 000 vrednosti koje imaju neki problem za konverzijom valuta.  
+Vidimo da je cak 48 000 tačno, što znači da imamo samo 2 000 vrednosti koje imaju neki problem sa konverzijom valuta.  
 ```{r}
 sum(reviews$price_usd == reviews$custom_price_usd)
 ```
-Potrebno je da dalje analiziramo ove vrednosti kako bismo videli da li su one u potpunosti pogresne i onda odluciti da li cemo ove redove ukloniti ili izracunati na osnovu vrednosti u price_local i exchange_rate. 
+Potrebno je da dalje analiziramo ove vrednosti kako bismo videli da li su one u potpunosti pogrešne i onda odlučiti da li ćemo ove redove ukloniti ili izračunati na osnovu vrednosti u price_local i exchange_rate. 
 
-Najpre cemo izdvojiti redove u kojima imamo neslaganja izmedju price_usd i custom_price_usd.
+Najpre ćemo izdvojiti redove u kojima imamo neslaganja između price_usd i custom_price_usd.
 ```{r}
 unmatching = reviews[reviews$price_usd != reviews$custom_price_usd, ]
 ```
 
-Ono sto primecujemo u prvih 10 redova jeste da je razlika u 0.01 sto je verovatno posledica zaokruzivanja vrednosti na dve decimale. Ovo je potrebno potvrditi i za ostatak vrednosti. 
+Ono što primećujemo u prvih 10 redova jeste da je razlika u 0.01 što je verovatno posledica zaokruživanja vrednosti na dve decimale. Ovo je potrebno potvrditi i za ostatak vrednosti. 
 
 ```{r}
 unmatching[, c("price_usd", "custom_price_usd", "price_local", "currency", "exchange_rate_to_usd")]
 ```
 
-Na ovaj nacin cemo prebrojati koliko ima redova cija je razlika jednaka ili manja od 0.01.  
+Na ovaj način ćemo prebrojati koliko ima redova čija je razlika jednaka ili manja od 0.01.  
 
-Razlog zbog kog smo uveli 1e-8 jeste klasican problem u racunarskim naukama i radu sa decimalnim brojevima. Iako mi ocekujemo da razlika bude 0.01, u realnosti to moze biti i 0.0100001. 
+Razlog zbog kog smo uveli 1e-8 jeste klasičan problem u računarskim naukama i radu sa decimalnim brojevima. Iako mi očekujemo da razlika bude 0.01, u realnosti to može biti i 0.0100001. 
 
 ```{r}
 sum(abs(abs(unmatching$price_usd - unmatching$custom_price_usd) - 0.01) < 1e-8)
 ```
 
-Vrednost koju smo dobili i koja iznosi 1758 cemo uporediti sa vrednoscu ukupnog broja redova gde se ne poklapaju price_usd i custom_price_usd.  
+Vrednost koju smo dobili i koja iznosi 1758 ćemo uporediti sa vrednošću ukupnog broja redova gde se ne poklapaju price_usd i custom_price_usd.  
 
 Vidimo da se broj redova poklapa.  
 
-Ovo je odlicno, to znaci da su sve lokalne valute ispravno konvertovane u USD.
+Ovo je odlično, to znači da su sve lokalne valute ispravno konvertovane u USD.
 
 ```{r}
 nrow(unmatching) - sum(abs(abs(unmatching$price_usd - unmatching$custom_price_usd) - 0.01) < 1e-8)
 ```
 
-Ovo je odlicno, zato sto smo sada sigurni u ispravnost ove promenljive i mozemo je u daljem radu koristiti ukoliko bude potrebno. 
+Ovo je odlično, zato što smo sada sigurni u ispravnost ove promenljive i možemo je u daljem radu koristiti ukoliko bude potrebno. 
 
 
 ## Odnos ciljane promenljive **_rating_** sa ostalim promenljivama u skupu
 
-Svaku promenljivu u skupu podataka cemo analizirati u odnosu na ciljnu promenljivu – rating kako bismo videli da li postoji veza u njihovim vrednostima. Na ovaj nacin, steci cemo bolji uvid u prirodu odnosa promenljivih i kasnije odrediti prediktore. 
+Svaku promenljivu u skupu podataka ćemo analizirati u odnosu na ciljnu promenljivu – rating kako bismo videli da li postoji veza u njihovim vrednostima. Na ovaj način, steći ćemo bolji uvid u prirodu odnosa promenljivih i kasnije odrediti prediktore. 
 
 <span style="color:red;">[Izmenjeno]</span>  
 
 ### battery_life_rating
-Posto su obe promenljive kategorijske, grafikom cemo lakse uociti povezanost medju njima. 
+Pošto su obe promenljive kategorijske, grafikom ćemo lakše uočiti povezanost među njima. 
 
-Mozemo pogledati najpre tabelarni prikaz. Na X osi nalazi se promenljiva _rating_ dok se na Y osi nalazi promenljiva _batery_life_rating_. Mozemo predstaviti ovaj odnos i grafikom.
+možemo pogledati najpre tabelarni prikaz. Na X osi nalazi se promenljiva _rating_ dok se na Y osi nalazi promenljiva _batery_life_rating_. možemo predstaviti ovaj odnos i grafikom.
 
 ```{r}
 table(reviews$rating, reviews$battery_life_rating)
 ```
 
-Ono sto je primetno i u tabeli i na grafiku jeste da ocena _battery_life_rating_-a povlaci i vrednost za _rating_. 
-Mozemo jasno videit da ukoliko je ocena _battery_life_rating_-a niska, i ciljna promenljiva prati te vrednosti. Isto vazi i ako su ocene visoke. 
+Ono što je primetno i u tabeli i na grafiku jeste da ocena _battery_life_rating_-a povlači i vrednost za _rating_. 
+možemo jasno videti da ukoliko je ocena _battery_life_rating_-a niska, i ciljna promenljiva prati te vrednosti. Isto važi i ako su ocene visoke. 
 
 ```{r}
 ggplot(reviews, aes(x = factor(battery_life_rating), fill = factor(rating))) +
@@ -572,7 +572,7 @@ ggplot(reviews, aes(x = factor(battery_life_rating), fill = factor(rating))) +
 
 ```
 
-Dodatno, provericemo pomocu funkcije _cor()_ zavisnost izmedju dve promenljive. Vidimo da postoji umereno jaka zavisnost izmedju ove dve promenljive, tako da je _battery_life_rating_ dobar kandidat za prediktora.
+Dodatno, proverićemo pomoću funkcije _cor()_ zavisnost između dve promenljive. Vidimo da postoji umereno jaka zavisnost između ove dve promenljive, tako da je _battery_life_rating_ dobar kandidat za prediktora.
 
 ```{r}
 # Korelacija
@@ -582,15 +582,15 @@ cor(reviews$battery_life_rating, reviews$rating)
 <span style="color:red;">[Izmenjeno]</span>  
 
 ### camera_rating
-Situacija sa odnosom izmedju promenljivih camera_rating i rating je slicna kao i prethodna. Veza izmedju dve promenljive je jaka i linearna.  
+Situacija sa odnosom između promenljivih camera_rating i rating je slična kao i prethodna. Veza između dve promenljive je jaka i linearna.  
 
-Tabelarni prikaz prikazuje povezanost izmedju ove dve promenljive. Jasno se moze videti da su retke visoke ocene za _rating_ kada je _camera_rating_ niska i obrnuto.
+Tabelarni prikaz prikazuje povezanost između ove dve promenljive. Jasno se može videti da su retke visoke ocene za _rating_ kada je _camera_rating_ niska i obrnuto.
 
 ```{r}
 table(reviews$rating, reviews$camera_rating)
 ```
 
-Graficki prikaz odnosа izmedju _rating_ i _camera_rating_ ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu kameri najcesce daju i veci ukupni rating uredjaja. 
+Grafički prikaz odnosа izmedju _rating_ i _camera_rating_ ukazuje na jasnu pozitivnu vezu – korisnici koji daju veću ocenu kameri najčešće daju i veći ukupni rating uređaja. 
 
 ```{r}
 ggplot(reviews, aes(x = factor(camera_rating), fill = factor(rating))) +
@@ -600,7 +600,7 @@ ggplot(reviews, aes(x = factor(camera_rating), fill = factor(rating))) +
   theme_minimal()
 ```
 
-Ispod mozemo videti visoku vrednost i funkcije _cor()_ za odnos sa ciljnom promenljivom. I ova promenljiva pokazuje umereno jaku korelaciju sa ciljnom promenljivom.
+Ispod možemo videti visoku vrednost i funkcije _cor()_ za odnos sa ciljnom promenljivom. I ova promenljiva pokazuje umereno jaku korelaciju sa ciljnom promenljivom.
 
 ```{r}
 cor(reviews$camera_rating, reviews$rating)
@@ -610,7 +610,7 @@ cor(reviews$camera_rating, reviews$rating)
 
 ### performance_rating  
 
-Takodje i ovde graficki prikaz odnosа izmedju rating i performance_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju vecu ocenu performansama uredjaja najcesce daju i veci ukupni rating uredjaja. 
+Takođe i ovde grafički prikaz odnosа između rating i performance_rating ukazuje na jasnu pozitivnu vezu – korisnici koji daju veću ocenu performansama uređaja najčešće daju i veći ukupni rating uređaja. 
 
 ```{r}
 ggplot(reviews, aes(x = factor(performance_rating), fill = factor(rating))) +
@@ -620,7 +620,7 @@ ggplot(reviews, aes(x = factor(performance_rating), fill = factor(rating))) +
   theme_minimal()
 ```
 
-Da bismo potvrdili zakljucak sa grafika, mozemo pogledati i rezultat funkcije _cor()_ koji meri stepen korelacije izmedju ove dve promenljive. Vrednost jasno ukazuje da postoji medjusobna zavisnost.
+Da bismo potvrdili zaključak sa grafika, možemo pogledati i rezultat funkcije _cor()_ koji meri stepen korelacije između ove dve promenljive. Vrednost jasno ukazuje da postoji međusobna zavisnost.
 ```{r}
 cor(reviews$performance_rating, reviews$rating)
 ```
@@ -628,7 +628,7 @@ cor(reviews$performance_rating, reviews$rating)
 <span style="color:red;">Izmenjeno</span>  
 
 ## design_rating  
-Sa grafika mozemo videti da osobe koje daju pozitivne ocene za dizajn uredjaja, najcesce imaju i visoku krajnju ocenu za uredjaj. 
+Sa grafika možemo videti da osobe koje daju pozitivne ocene za dizajn uređaja, najčešće imaju i visoku krajnju ocenu za uređaj. 
 
 ```{r}
 ggplot(reviews, aes(x = factor(design_rating), fill = factor(rating))) +
@@ -648,7 +648,7 @@ cor(reviews$design_rating, reviews$rating)
 
 ### display_rating  
 
-Jos jedna promenljiva koja pokazuje umereno jaku zavisnost sa ciljnom promenljivom – _rating_. 
+Još jedna promenljiva koja pokazuje umereno jaku zavisnost sa ciljnom promenljivom – _rating_. 
 
 ```{r}
 ggplot(reviews, aes(x = factor(display_rating), fill = factor(rating))) +
@@ -663,17 +663,17 @@ ggplot(reviews, aes(x = factor(display_rating), fill = factor(rating))) +
 cor(reviews$display_rating, reviews$rating)
 ```
 
-## Dosadasnji zakljucak  
-Najpre smo uporedili zavisnost izmedju ukupne ocene samog uredjaj i pojedinacnih ocena (po nekoj kategoriji). Primetno je da svih 5 pojedinacnih kategorija ocenjivanja pokazuju zavisnost sa krajnjom ocenom.  
+## Dosadašnji zakljucak  
+Najpre smo uporedili zavisnost izmedju ukupne ocene samog uređaj i pojedinačnih ocena (po nekoj kategoriji). Primetno je da svih 5 pojedinačnih kategorija ocenjivanja pokazuju zavisnost sa krajnjom ocenom.  
 
-Ovo je donekle ocekivano. Ono sto je najcesca praksa prilikom ocenjivanja neke usluge/proizvoda jeste forma u kojoj je moguce oceniti neke od pojedinacnih kategorija od 1 – 5 (najcesce su to zvezdice ili tackice) i na kraju krajnju ocenu. Na osnovu svega ovoga, ovaj sled zavisnosti je ocekivan. 
+Ovo je donekle očekivano. Ono što je najčešća praksa prilikom ocenjivanja neke usluge/proizvoda jeste forma u kojoj je moguće oceniti neke od pojedinačnih kategorija od 1 – 5 (najčešće su to zvezdice ili tackice) i na kraju krajnju ocenu. Na osnovu svega ovoga, ovaj sled zavisnosti je očekivan. 
 
-Provericemo i da li izmedju ovih promenljivih postoji multikolinernost - odnosno medjusobna zavisnost.
+Proverićemo i da li između ovih promenljivih postoji multikolinernost - odnosno međusobna zavisnost.
 
 ### price_usd  
-Ono sto moze uticati na ocenu samog uredjaj je i cena. Neki uredjaj je preplacen, neki je jednostavno dosta jeftiniji u odnosu na ono sto pruza. Mozemo nacrtati grafik i pokusati da na njemu uocimo neku zavisnost.  
+Ono što može uticati na ocenu samog uređaja je i cena. Neki uređaj je preplaćen, neki je jednostavno dosta jeftiniji u odnosu na ono što pruža. Možemo nacrtati grafik i pokušati da na njemu uočimo neku zavisnost.  
 
-Iako bismo mozda ocekivali da cena utice na krajnju ocenu, tvrdnja da je skuplji telefon ujedno i bolji ne mora biti nuzno tacna. Zbog toga, mozemo videti da cena nema nikakav znacaj na krajnju ocenu korisnika
+Iako bismo možda očekivali da cena utiče na krajnju ocenu, tvrdnja da je skuplji telefon ujedno i bolji ne mora biti nužno tačna. Zbog toga, možemo videti da cena nema nikakav značaj na krajnju ocenu korisnika
 ```{r}
 ggplot(reviews, aes(x = factor(rating), y = price_usd)) +
   geom_boxplot(fill = "skyblue") +
@@ -689,15 +689,15 @@ ggplot(reviews, aes(x = factor(rating), y = price_usd)) +
 
 ### brand  
 
-Uprkos tome sto bismo mozda ocekivali da brend utice na krajnju ocenu uredjaja, grafik i podaci iz naseg skupa podataka ne govore u prilog tome.  
+Uprkos tome što bismo možda očekivali da brend utiče na krajnju ocenu uređaja, grafik i podaci iz našeg skupa podataka ne govore u prilog tome.  
 
-Prema grafiku, ne postoji statisticki znacajna razlika u prosecnom rating-u izmedju razlicitih brendova. 
+Prema grafiku, ne postoji statistički značajna razlika u prosečnom rating-u između različitih brendova. 
 ```{r}
 ggplot(reviews, aes(x = factor(brand), fill = factor(rating))) +
   geom_bar(position = "dodge") +
   theme_minimal() +
   labs(
-    title = "Uporedjivanje ratinga po brandu",
+    title = "Upoređivanje ratinga po brandu",
     x = "Brand",
     y = "Rating"
   ) +
@@ -707,14 +707,14 @@ ggplot(reviews, aes(x = factor(brand), fill = factor(rating))) +
 <span style="color:red;">[Izmenjeni grafici]</span>  
 
 ### sentiment  
-Sa grafika ispod mozemo uociti sledece:
+Sa grafika ispod možemo uočiti sledeće:
 - recenzije sa Negative sentimentom imaju uglavnom niske ocene (1–2)
 - recenzije sa Neutral sentimentom imaju ocene uglavnom oko 2–3 
 - recenzije sa Positive sentimentom imaju uglavnom visoke ocene (4–5) 
 
-Logicno je da ce zadovoljni kupci davati vece ocene. 
+Logično je da ce zadovoljni kupci davati veće ocene. 
 
-Ono sto dodatno mozemo uociti na grafiku jesu potencijalni outlier-i za Negative i Neutral vrednosti promenljive Sentiment. Iako je vecina korisnika koja je za Sentiment dala ocenu Negative ocenila proizvod sa 1 i 2, postoje korisnici koji su ipak ocenili sa 4. Kod neutral je slicna situacija, najcesce ocene su 2 i 3, ali imamo i ocenu 5.  
+Ono što dodatno možemo uočiti na grafiku jesu potencijalni outlier-i za Negative i Neutral vrednosti promenljive Sentiment. Iako je većina korisnika koja je za Sentiment dala ocenu Negative ocenila proizvod sa 1 i 2, postoje korisnici koji su ipak ocenili sa 4. Kod neutral je slična situacija, najčešće ocene su 2 i 3, ali imamo i ocenu 5.  
 
 ```{r}
 ggplot(reviews, aes(x = sentiment, y = rating)) +
@@ -725,17 +725,17 @@ ggplot(reviews, aes(x = sentiment, y = rating)) +
   theme_minimal()
 ```
 
-Kako bismo bolje uvideli outlier-e, mozemo za svaku kategoriju iz _sentiment_-a kreirati grafik. Ono sto cemo ukljuciti u sam grafik jeste model uredjaja, jer se moze da dogoditi da je to outlier u opstem skupu podataka, ali ne i za model uredjaja. 
+Kako bismo bolje uvideli outlier-e, možemo za svaku kategoriju iz _sentiment_-a kreirati grafik. Ono što ćemo uključiti u sam grafik jeste model uređaja, jer se može da dogoditi da je to outlier u opštem skupu podataka, ali ne i za model uređaja. 
 
-## Graficki prikaz outlier-a  
+## Grafički prikaz outlier-a  
 
-Posto imamo veliki broj kategorija za modele, a zelimo da vidimo outlier-e po kategoriji modela i po kategoriji sentiment-a, razdvojicemo grafike za svaku pojedinacnuu vrednosti _sentiment_-a.
+Pošto imamo veliki broj kategorija za modele, a želimo da vidimo outlier-e po kategoriji modela i po kategoriji sentiment-a, razdvojićemo grafike za svaku pojedinačnu vrednosti _sentiment_-a.
 
 ### Negative sentiment  
 
-Najpre cemo prikazati negativne vrednosti ove promenljive.
-Na grafiku ispod mozemo videti da je najveci broj korisnika, kada je izrazio opste nezadovoljstvo proizvodom, dao i negativnu konacnu ocenu, odnosno 1 ili 2. Medjutim, ima dosta korisnika koji su dali i prosecnu ocenu - 3.
-One ocene, koje mozemo smatrati outlier-ima su ocene 4. Ovo su vrednosti koje odskacu na grafiku i predstavljaju outlier-e. 
+Najpre ćemo prikazati negativne vrednosti ove promenljive.
+Na grafiku ispod možemo videti da je najveći broj korisnika, kada je izrazio opste nezadovoljstvo proizvodom, dao i negativnu konačnu ocenu, odnosno 1 ili 2. Međutim, ima dosta korisnika koji su dali i prosečnu ocenu - 3.
+One ocene, koje možemo smatrati outlier-ima su ocene 4. Ovo su vrednosti koje odskaču na grafiku i predstavljaju outlier-e. 
 ```{r}
 negative_sentiment_df = reviews %>%
   filter(sentiment == "Negative")
@@ -753,7 +753,7 @@ ggplot(negative_sentiment_df, aes(x = model, y = rating)) +
 
 ```
 
-Posto smo preko grafika zakljucili da su outlier-i one vrednosti koje imaju _rating_ preko 3, mozemo prebrojati koliko ima tih vrednosti.
+Pošto smo preko grafika zaključili da su outlier-i one vrednosti koje imaju _rating_ preko 3, možemo prebrojati koliko ima tih vrednosti.
 Vidimo da postoji 62 outlier-a kada je _sentiment_ negativan.
 ```{r}
 
@@ -765,10 +765,10 @@ negative_sentiment_outlier_num
 
 ### Neutral sentiment  
 
-Sada cemo pogledati sta se desava sa neutralnim opstim iskustvom o modelu uredjaja.
+Sada ćemo pogledati sta se dešava sa neutralnim opštim iskustvom o modelu uređaja.
 
-Na grafiku ispod mozemo primetiti da je slabija grupacija kada je vrednost za _rating_ veca od 4.
-Tako da mozemo smatrati da su u ovoj kategoriji - kada je sentiment neutralan, outlier-i krecu kao vrednosti za _rating_ vece od 4.
+Na grafiku ispod možemo primetiti da je slabija grupacija kada je vrednost za _rating_ veća od 4.
+Tako da možemo smatrati da su u ovoj kategoriji - kada je sentiment neutralan, outlier-i kreću kao vrednosti za _rating_ veće od 4.
 
 ```{r}
 neutral_sentiment_df = reviews %>%
@@ -786,8 +786,8 @@ ggplot(neutral_sentiment_df, aes(x = model, y = rating)) +
   theme_minimal()
 
 ```
-Kao i sa prethodnom kategorijom, izracunacemo o kom broju outlier-a se radi.
-Ovde imamo nesto vise ovih vrednosti, ali obzirom da nam skup podataka ima 50 hiljada redova, mozemo reci da to nije veliki broj outlier-a.
+Kao i sa prethodnom kategorijom, izračunaćemo o kom broju outlier-a se radi.
+Ovde imamo nešto više ovih vrednosti, ali obzirom da nam skup podataka ima 50 hiljada redova, možemo reći da to nije veliki broj outlier-a.
 
 ```{r}
 neutral_sentiment_outlier_num = sum(neutral_sentiment_df$rating > 4)
@@ -798,11 +798,11 @@ neutral_sentiment_outlier_num
 
 ### Positive sentiment  
 
-Poslednja, treca kategorija za sentiment su pozitivne vrednosti, odnosno pozitivan opsti utisak o uredjaju. 
+Poslednja, treća kategorija za sentiment su pozitivne vrednosti, odnosno pozitivan opšti utisak o uređaju. 
 
-Izdvojimo ove vrednosti u poseban data frame i nacrtajmo grafik kako bismo vizuelno uocili outlier-a.
+Izdvojimo ove vrednosti u poseban data frame i nacrtajmo grafik kako bismo vizuelno uočili outlier-a.
 
-Zahvaljujuci grafiku, mozemo videti da su ovde outlier-i vrednosti koje imaju _rating_ manji od 2, sto je donekle i ocekivano, ali grafik to potvrdjuje.
+Zahvaljujući grafiku, možemo videti da su ovde outlier-i vrednosti koje imaju _rating_ manji od 2, što je donekle i očekivano, ali grafik to potvrđuje.
 ```{r}
 positive_sentiment_df = reviews %>%
   filter(sentiment == "Positive")
@@ -819,15 +819,15 @@ ggplot(positive_sentiment_df, aes(x = model, y = rating)) +
   theme_minimal()
 ```
 
-Na osnovu grafika isto mozemo videti da nema previse outlier-a u ovoj kategoriji, ali je najpreciznije izracunati tacnu vrednost.
+Na osnovu grafika isto možemo videti da nema previše outlier-a u ovoj kategoriji, ali je najpreciznije izračunati tačnu vrednost.
 ```{r}
 positive_sentiment_outlier_num = sum(positive_sentiment_df$rating < 2)
 
 positive_sentiment_outlier_num
 ```
 
-Kada saberemo broj outlier-a za svaku kategoriju promenljive _sentiment_ mozemo videti da u nasem skupu podataka imamo 170 outlier-a.
-Ovaj broj outlier-a predstavlja manje od 1% ukupnih opservacija u nasem skupu podataka, preciznije ~ 0.34%. 
+Kada saberemo broj outlier-a za svaku kategoriju promenljive _sentiment_ možemo videti da u našem skupu podataka imamo 170 outlier-a.
+Ovaj broj outlier-a predstavlja manje od 1% ukupnih observacija u našem skupu podataka, preciznije ~ 0.34%. 
 
 ```{r}
 outlier_num_total = negative_sentiment_outlier_num + neutral_sentiment_outlier_num + positive_sentiment_outlier_num
@@ -839,12 +839,12 @@ outlier_num_total
 
 ## Uklanjanje outlier-a iz skupa podataka  
 
-Posto outlier-i predstavljaju zanemarljivu kolicinu podataka u nasem skupu podataka, a mogu imati znacajan uticaj na preciznost samog modela, uklonicemo ih iz naseg skupa podataka.
+Pošto outlier-i predstavljaju zanemarljivu količinu podataka u našem skupu podataka, a mogu imati značajan uticaj na preciznost samog modela, uklonićemo ih iz našeg skupa podataka.
 
-Sumirajmo ono po cemu treba izbaciti outlier-e:
-- Kada _sentiment_ ima vrednost _Negative_ i _rating_ veci od 3, te opservacije se smatraju outlier-ima
-- Kada _sentiment_ ima vrednost _Neutral_ i _rating_ veci od 4, te opservacije se smatraju outlier-ima
-- Kada _sentiment_ ima vrednost _Positive_ i _rating_ manji od 2, te opservacije se smatraju outlier-ima
+Sumirajmo ono po čemu treba izbaciti outlier-e:
+- Kada _sentiment_ ima vrednost _Negative_ i _rating_ veći od 3, te observacije se smatraju outlier-ima
+- Kada _sentiment_ ima vrednost _Neutral_ i _rating_ veći od 4, te observacije se smatraju outlier-ima
+- Kada _sentiment_ ima vrednost _Positive_ i _rating_ manji od 2, te observacije se smatraju outlier-ima
 
 Uklonimo ovakve vrednosti iz skupa podataka.
 
@@ -860,8 +860,8 @@ reviews = reviews %>%
 
 ```
 
-Proverimo da li su uspesno uklonjeni outlier-i proverom broja redova u skupu podataka. 
-Vidimo da je broj redova smanjen, sto znaci da smo uspesno uklonili outlier-e.
+Proverimo da li su uspešno uklonjeni outlier-i proverom broja redova u skupu podataka. 
+Vidimo da je broj redova smanjen, što znači da smo uspešno uklonili outlier-e.
 
 ```{r}
 dim(reviews)
@@ -869,9 +869,9 @@ dim(reviews)
 
 ### age  
 
-Sada cemo proveriti age, jer starost korisnika moze uticati na ocenu jer razlicite generacije razlicito dozivljavaju telefone. 
+Sada ćemo proveriti age, jer starost korisnika može uticati na ocenu, zato što različite generacije različito doživljavaju telefone. 
 
-Medjutim, na osnovu grafika mozemo zakljuciti da starost korisnika nema znacajan uticaj na ocenu uredjaja. 
+Međutim, na osnovu grafika možemo zaključiti da starost korisnika nema značajan uticaj na ocenu uređaja. 
 
 ```{r}
 ggplot(reviews, aes(x = factor(rating), y = age)) +
@@ -884,13 +884,13 @@ ggplot(reviews, aes(x = factor(rating), y = age)) +
   theme_minimal()
 ```
 
-Na osnovu grafika i rezultata funkcije za odredjivanje korelacije izmedju dve promenljive, mozemo zakljuciti da ova promenljiva nije preterano znacajna za odredjivanje ciljne promenljive.
+Na osnovu grafika i rezultata funkcije za određivanje korelacije između dve promenljive, možemo zaključiti da ova promenljiva nije preterano značajna za odredjivanje ciljne promenljive.
 
 ```{r}
 cor(reviews$age,reviews$rating)
 ```
 
-Medjutim, posto je ovo numericka vrednost, mozemo godine svrstati u tri kategorije - Mladi, Srednje godine i Starija dob.
+Međutim, pošto je ovo numerička vrednost, možemo godine svrstati u tri kategorije - Mladi, Srednje godine i Starije doba
 
 ```{r}
 reviews = reviews %>%
@@ -901,27 +901,25 @@ reviews = reviews %>%
   ))
 ```
 
-Ovako kreiranu promenljivu cemo pretvoriti u faktorsku, odnosno kategorijsku.
+Ovako kreiranu promenljivu ćemo pretvoriti u faktorsku, odnosno kategorijsku.
 
 ```{r}
 reviews$age_category = factor(reviews$age_category)
 ```
 
-Sada cemo uporediti ciljnu promenljivu rating sa age_category. 
+Sada ćemo uporediti ciljnu promenljivu rating sa age_category. 
 
 ```{r}
 table(reviews$age_category, reviews$rating)
 ```
 
-Na osnovu ove tabele, mozemo videti da sve uzrasne grupe ocenjuju uredjaje najcesce sa 3 i 4, sto je negde prosecna ocena. Dodatno, na osnovu ove tabele mozemo zakljuciti da odsupanja na prethodnom grafiku – koja lice na outlier-e to nisu. To je starija populacija koje ima dosta manje u odnosu na ostale dve. 
+Na osnovu ove tabele, možemo videti da sve uzrasne grupe ocenjuju uređaje najčešće sa 3 i 4, što je negde prosečna ocena. Dodatno, na osnovu ove tabele možemo zaključiti da odsupanja na prethodnom grafiku – koja liče na outlier-e to nisu. To je starija populacija koje ima dosta manje u odnosu na ostale dve. 
 
 <span style="color:red;">[Izmenjen grafik]</span>  
 
 ### source  
 
-Sada cemo proveriti odnos source i rating. Source predstavlja mesto gde je komentar ostavljen, a ujedno moze predstavljati i platformu sa koje je proizvod kupljen. Platforma na kojoj je recenzija ostavljena moZe biti indikator i kvaliteta samog uredjaja (npr. prodaja kopija na odredjenim sajtovima). 
-
-Ne postoji statisticki znacajna razlika u prosecnim ocenama izmedju razlicitih platformi. To znaci da source nije presudan faktor uocenjivanju uredjaja. 
+Sada ćemo proveriti odnos source i rating. Source predstavlja mesto gde je komentar ostavljen, a ujedno može predstavljati i platformu sa koje je proizvod kupljen. Platforma na kojoj je recenzija ostavljena može biti indikator i kvaliteta samog uređaja (npr. prodaja kopija na određenim sajtovima). 
 
 ```{r}
 ggplot(reviews, aes(x = source, fill = factor(rating))) +
@@ -937,27 +935,24 @@ ggplot(reviews, aes(x = source, fill = factor(rating))) +
 anova_test <- aov(rating ~ source, reviews)
 summary(anova_test)
 ```
-Ne postoji statisticki znacajna razlika u prosecnim ocenama izmedju razlicitih platformi. To znaci da source nije presudan faktor u
-ocenjivanju uredjaja.
-
-Hocemo sada da proverimo verified_purchase u odnosu na rating, zato sto verifikovana kupovina povecava kredibilitet ocene, 
-ljudi koji su stvarno kupili uredjaj obicno daju realnije ocene, manje laznih bot komentara.
+Ne postoji statistički značajna razlika u prosečnim ocenama između različitih platformi. To znači da source nije presudan faktor u
+ocenjivanju uređaja.
 
 <span style="color:red;">[Izmenjen grafik]</span>  
 
 ### verified_purchase  
 
-Hocemo sada da proverimo verified_purchase u odnosu na rating, zato sto verifikovana kupovina povecava kredibilitet ocene. Ljudi koji su stvarno kupili uredjaj obicno daju realnije ocene, manje laznih bot komentara. 
+Hoćemo sada da proverimo verified_purchase u odnosu na rating, zato što verifikovana kupovina povećava kredibilitet ocene. Ljudi koji su stvarno kupili uređaj obično daju realnije ocene, manje lažnih bot komentara. 
 
-Iako smo pretpostavili da verifikovane recenzije imaju vecu kredibilnost, analiza pokazuje da prosecne ocene ne variraju znacajno u zavisnosti od statusa kupovine.  
+Iako smo pretpostavili da verifikovane recenzije imaju veću kredibilnost, analiza pokazuje da prosečne ocene ne variraju značajno u zavisnosti od statusa kupovine.  
 
-Zbog ove analize, necemo iskljuciti vrednosti sa neverifikovanom recenzijom iz skupa podataka zato sto, kao sto vidimo na grafiku ispod, nema znacajnog uticaja. 
+Zbog ove analize, nećemo isključiti vrednosti sa neverifikovanom recenzijom iz skupa podataka zato što, kao sto vidimo na grafiku ispod, nema značajnog uticaja. 
 
 ```{r}
 ggplot(reviews, aes(x = factor(verified_purchase), fill = factor(rating))) +
   geom_bar(position = "dodge") +
   labs(
-    title = "Uporedjivanje ocena po statusu kupovine",
+    title = "Upoređivanje ocena po statusu kupovine",
     x = "Verified Purchase",
     y = "Rating"
   ) + theme_minimal()
@@ -967,9 +962,9 @@ ggplot(reviews, aes(x = factor(verified_purchase), fill = factor(rating))) +
 
 ### helpful_votes  
 
-Vidimo da je promenljiva helpful_votes znacajna u odredjenoj meri. Uredjaji koji imaju veci broj "korisnih glasova" na recenzijama uglavnom imaju nesto visi rating. 
+Vidimo da je promenljiva helpful_votes značajna u određenoj meri. Uređaji koji imaju veci broj "korisnih glasova" na recenzijama uglavnom imaju nešto viši rating. 
 
-Znaci popularnije recenzije su cesto one koje su dale dobru ocenu proizvodu. 
+Znači popularnije recenzije su često one koje su dale dobru ocenu proizvodu. 
 
 ```{r}
 
@@ -992,7 +987,7 @@ cor(reviews$helpful_votes, reviews$rating)
 
 ### review_date  
 
-Deluje da datum recenzije nema nikakav znacaj na ukupan rating, pogledacemo i prosecan rating po mesecima. 
+Deluje da datum recenzije nema nikakav značaj na ukupan rating, pogledaćemo i prosečan rating po mesecima. 
 
 ```{r}
 
@@ -1001,7 +996,7 @@ reviews$review_date <- as.Date(reviews$review_date)
 ggplot(reviews, aes(x = review_date, y = rating)) +
   geom_jitter(alpha = 0.3) +
   labs(
-    title = "Veza izmedju datuma recenzije i ocene",
+    title = "Veza između datuma recenzije i ocene",
     x = "Datum recenzije",
     y = "Rating"
   ) +
@@ -1010,7 +1005,7 @@ ggplot(reviews, aes(x = review_date, y = rating)) +
 
 ```
 
-Najpre cemo napraviti malu pripremu podataka za iscrtavanje grafika.  
+Najpre ćemo napraviti malu pripremu podataka za iscrtavanje grafika.  
 
 ```{r}
 
@@ -1023,25 +1018,25 @@ ggplot(df_month, aes(x = month, y = avg_rating)) +
   geom_line(size = 1) +
   geom_point(color = "steelblue") +
   labs(
-    title = "Prosecan rating po mesecima",
+    title = "Prosečan rating po mesecima",
     x = "Mesec",
-    y = "Prosecan rating"
+    y = "Prosečan rating"
   ) +
   theme_minimal()
 
 ```
 
-Sa grafika mozemo videti da su podaci prilicno nasumicno rasporedjeni, takodje opseg prosecnog rating-a je od 3.00 do 3.20, sto je ne toliko znacajna razlika.  
+Sa grafika možemo videti da su podaci prilično nasumično raspoređeni, takođe opseg prosečnog rating-a je od 3.00 do 3.20, što je ne toliko značajna razlika.  
 
-Ova promenljiva nam verovatno nece biti znacajna u predvidjanju. 
+Ova promenljiva nam verovatno neće biti značajna u predviđanju. 
 
 <span style="color:red;">[Izmenjen grafik]</span>  
 
 ### language  
 
-Na osnovu grafika ispod, mozemo zakljucitida svi jezici daju proporcionalno iste glasove. Najvise ima onih sa _rating_-om 4 i 3, pa zatim ostalih. 
-Za svaki jezik mozemo videti da je struktura identicna, samo za englesko govorno podrucje ima vise recenzije pa je zbog toga prividno drugacije.
-Oblik zastupljenosti ocena je identican za sve jezike.
+Na osnovu grafika ispod, možemo zaključiti da svi jezici daju proporcionalno iste glasove. Najviše ima onih sa _rating_-om 4 i 3, pa zatim ostalih. 
+Za svaki jezik možemo videti da je struktura identična, samo za englesko govorno područje ima više recenzije pa je zbog toga prividno drugačije.
+Oblik zastupljenosti ocena je identičan za sve jezike.
 
 ```{r}
 
@@ -1049,7 +1044,7 @@ ggplot(reviews, aes(x = factor(language), fill = factor(rating))) +
   geom_bar(position = "dodge") +
   theme_minimal() +
   labs(
-    title = "Uporedjivanje ratinga po jeziku",
+    title = "Upoređivanje ratinga po jeziku",
     x = "Language",
     y = "Rating"
   )
@@ -1059,8 +1054,8 @@ ggplot(reviews, aes(x = factor(language), fill = factor(rating))) +
 
 ### country  
 
-Jos jedna promenljiva koja ne pokazuje nikakav uticaj na nasu ciljnu promenljivu – rating. 
-Na grafiku se jasno videi da je _rating_ priblizno istog oblika za sve drzave.
+Još jedna promenljiva koja ne pokazuje nikakav uticaj na našu ciljnu promenljivu – rating. 
+Na grafiku se jasno videi da je _rating_ približno istog oblika za sve države.
 
 ```{r}
 
@@ -1068,7 +1063,7 @@ ggplot(reviews, aes(x = factor(country), fill = factor(rating))) +
   geom_bar(position = "dodge") +
   theme_minimal() +
   labs(
-    title = "Uporedjivanje ratinga po drzavama",
+    title = "Upoređivanje ratinga po državama",
     x = "Country",
     y = "Count"
   )
@@ -1079,11 +1074,11 @@ ggplot(reviews, aes(x = factor(country), fill = factor(rating))) +
 #Feature selection  
 
 
-Prilikom izbora prediktora za odredjivanje nase ciljne promenljive – rating, primenicemo dva pristupa.  
+Prilikom izbora prediktora za određivanje naše ciljne promenljive – rating, primenićemo dva pristupa.  
 
-Prvi pristup bice zasnovan na Feature importance-u Random Forest modela koji ce nam pomoci u selekciji najvaznih modela, a drugi je nasa selekcija na osnovu uporedjivanja odnosa svake promenljive sa ciljnom.  
+Prvi pristup biće zasnovan na Feature importance-u Random Forest modela koji će nam pomoći u selekciji najvažnih modela, a drugi je naša selekcija na osnovu upoređivanja odnosa svake promenljive sa ciljnom.  
 
-Podsetimo se jos jednom strukture naseg skupa podataka, ali sada u nesto izmenjenim tipovima promenljivih nakon inicijalne obrade (pretvaranja u faktorske promenljive, ciscenje od specijalnih karaktera, pretvaranje u numericke kategorije i slicno). 
+Podsetimo se još jednom strukture našeg skupa podataka, ali sada u nešto izmenjenim tipovima promenljivih nakon inicijalne obrade (pretvaranja u faktorske promenljive, čišćenje od specijalnih karaktera, pretvaranje u numeričke kategorije i slično). 
 
 ```{r}
 str(reviews)
@@ -1091,9 +1086,9 @@ str(reviews)
 
 ## Feature importance Random Forest modela  
 
-Random Forest je model koji kombinuje veci broj stabala odlucivanja i pogodan je za probleme klasifikacije. Za problem klasifikacije – kakav je nas problem, ne mozemo koristiti Lasso i Ridge regularizaciju, ali mozemo iskoristit neke benefite Random forest modela.  
+Random Forest je model koji kombinuje veći broj stabala odlučivanja i pogodan je za probleme klasifikacije. Za problem klasifikacije – kakav je naš problem, ne možemo koristiti Lasso i Ridge regularizaciju, ali možemo iskoristit neke benefite Random forest modela.  
 
-Uporedjivanjem svake promenljive sa ciljnom, dosli smo do zakljucka koje promenljive dosta dobro opisuju ciljnu promenljivu. Najznacajniji prediktori su: 
+Upoređivanjem svake promenljive sa ciljnom, došli smo do zaključka koje promenljive dosta dobro opisuju ciljnu promenljivu. Najznačajniji prediktori su: 
 - _camera_rating_
 - _display_rating_
 - _batery_life_rating_
@@ -1101,7 +1096,7 @@ Uporedjivanjem svake promenljive sa ciljnom, dosli smo do zakljucka koje promenl
 - _perfomance_rating_
 - _sentiment_
 
-Primenicemo Random forest model nad celokupnih skupom podataka i analizirati rezultat njegove feature importance opcije da vidimo koje prediktore on identifikuje kao znacajne. 
+Primenićemo Random forest model nad celokupnim skupom podataka i analizirati rezultat njegove feature importance opcije da vidimo koje prediktore on identifikuje kao značajne. 
 
 ```{r}
 
@@ -1120,15 +1115,15 @@ importance(rf_model)
 
 ```
 
-Na slici iznad mozemo videti dve vrednosti koje nam mogu pomoci u odredjivanju prediktora: 
+Na slici iznad možemo videti dve vrednosti koje nam mogu pomoci u određivanju prediktora: 
 
-- **_Mean Decrease Acuracy_** koji nam govori koliko bii se smanjila tacnost modela ako bi se ta promenljiva izmenila (da sve ostale promenljive ostanu iste, ali da se samo ta promenljiva znacajno izmeni) 
+- **_Mean Decrease Acuracy_** koji nam govori koliko bii se smanjila tačnost modela ako bi se ta promenljiva izmenila (da sve ostale promenljive ostanu iste, ali da se samo ta promenljiva značajno izmeni) 
 
-- **_Mean Decrease Gini_** ili Gini indeks meri koliko promenljiva doprinosi cistoci cvorova (veca vrednost znaci da je promenljiva znacajna i da dobro razdvaja stablo odlucivanja na klase) 
+- **_Mean Decrease Gini_** ili Gini indeks meri koliko promenljiva doprinosi čistoći cvorova (veća vrednost znači da je promenljiva značajna i da dobro razdvaja stablo odlučivanja na klase) 
 
-Na osnovu ove dve vrednosti, mozemo zakljuciti da je ovaj model odredio iste prediktore kao znacajne kao sto smo i mi odradili rucnom analizom pojedinacnih promenljivih sa ciljnom. 
+Na osnovu ove dve vrednosti, možemo zaključiti da je ovaj model odredio iste prediktore kao značajne kao sto smo i mi odradili ručnom analizom pojedinačnih promenljivih sa ciljnom. 
 
-Ove dve vrednosti, zajedno sa promenljivama mozemo predstaviti i graficki kako bismo vizuelno lakse primetili razliku. One promenljive cije vrednosti znacajno odskacu u odnosu na ostale su upravo prediktori koje smo i rucno ustanovili. 
+Ove dve vrednosti, zajedno sa promenljivama možemo predstaviti i grafički kako bismo vizuelno lakše primetili razliku. One promenljive čije vrednosti značajno odskaču u odnosu na ostale su upravo prediktori koje smo i ručno ustanovili. 
 
 ```{r}
 
@@ -1136,7 +1131,7 @@ varImpPlot(rf_model)
 
 ```
 
-Posto nam se poklapa izbor prediktora, zakljucujemo da su ovih 6 promenljivih korisne za odredjivanje ciljne promenljive i njih cemo izvuci u zaseban skup podataka koji ce sadrzati samo promenljive bitne za predikciju nase ciljne promenljive i samu ciljnu promenljivu.  
+Pošto nam se poklapa izbor prediktora, zaključujemo da su ovih 6 promenljivih korisne za određivanje ciljne promenljive i njih ćemo izvući u zaseban skup podataka koji će sadržati samo promenljive bitne za predikciju naše ciljne promenljive i samu ciljnu promenljivu.  
 
 ```{r}
 
@@ -1150,8 +1145,8 @@ names(reviews_important_vars)
 
 ## Provera multikolinearnosti izmedju prediktora  
 
-Posto smo odabrali skup prediktora koji ce potencijalno dobro opisati model, treba proveriti da li izmedju tih prediktora postoji neka vrsta multikolinearnosti. 
-Modeli mogu dati pogresne rezultate zbog pristustva multikolinearnosti medju prediktorima, pa je cilj ove analize da takve prediktore uoci i odluci sta ce raditi sa njima ukoliko postoje.
+Pošto smo odabrali skup prediktora koji će potencijalno dobro opisati model, treba proveriti da li između tih prediktora postoji neka vrsta multikolinearnosti. 
+Modeli mogu dati pogresne rezultate zbog pristustva multikolinearnosti među prediktorima, pa je cilj ove analize da takve prediktore uoči i odluči šta će raditi sa njima ukoliko postoje.
 
 Pogledajmo strukturu promenljivih unutar _reviews_important_vars_.
 
@@ -1159,17 +1154,17 @@ Pogledajmo strukturu promenljivih unutar _reviews_important_vars_.
 str(reviews_important_vars)
 ```
 
-Vidimo da je jedino jos promenljiva _sentiment_ faktorskog tipa. Nju cemo prebacitit u numericku obzirom da funkcija _cor()_ koju cemo upotrebiti da proverimo multikolinearnost radi iskljucivo sa numerickim vrednostima.
+Vidimo da je jedino još promenljiva _sentiment_ faktorskog tipa. Nju ćemo prebacitit u numeričku obzirom da funkcija _cor()_ koju ćemo upotrebiti da proverimo multikolinearnost radi isključivo sa numeričkim vrednostima.
 
 ```{r}
 reviews_important_vars$sentiment = as.numeric(factor(reviews_important_vars$sentiment))
 ```
 
-Pokrenimo funckiju _cor()_ nad skupom podataka koji sadrzi odabrane prediktore i ciljnu promenljivu.
+Pokrenimo funckiju _cor()_ nad skupom podataka koji sadrži odabrane prediktore i ciljnu promenljivu.
 
-Trenutno nas ne zanima korelacija izmedju promenljive _rating_ i ostalih zato sto je to ciljna promenljiva. Ono sto nas zanima jeste da li je vrednost izmedju dva prediktora veca od 0.8 sto bi ukazivalo na visoku multikolineranost.
+Trenutno nas ne zanima korelacija izmedju promenljive _rating_ i ostalih zato što je to ciljna promenljiva. Ono što nas zanima jeste da li je vrednost izmedju dva prediktora veća od 0.8 što bi ukazivalo na visoku multikolineranost.
 
-U tabeli ispod mozemo videti da je korelisanost izmedju prediktora maksimalno 0.59 sto je umerena korelacija i ne predstavlja problem u nasem skupu podatka.
+U tabeli ispod možemo videti da je korelisanost između prediktora maksimalno 0.59 što je umerena korelacija i ne predstavlja problem u našem skupu podatka.
 
 ```{r}
 cor = cor(reviews_important_vars)
@@ -1177,9 +1172,9 @@ cor = cor(reviews_important_vars)
 cor
 ```
 
-Dodatno, mozemo predstaviti ove vrednosti preko grafika kako bismo imali jos jasniji, vizuelni pregled korelacije izmedju promenljivih.
+Dodatno, možemo predstaviti ove vrednosti preko grafika kako bismo imali još jasniji, vizuelni pregled korelacije između promenljivih.
 
-Mozemo videti da promenljiva _rating_ ima korelaciju sa ostalim promenljivama cak 0.76, dok prediktori medjusobno imaju oko 0.58. To je prihvatljivo.
+Možemo videti da promenljiva _rating_ ima korelaciju sa ostalim promenljivama čak 0.76, dok prediktori međusobno imaju oko 0.58. To je prihvatljivo.
 
 ```{r}
 
@@ -1193,9 +1188,9 @@ corrplot(cor,
 
 # Podela skupa podataka  
 
-Skup podataka ima dovoljnu kolicinu podataka za analizu – cak 50 hiljada linija, tako da cemo moci da podelimo skup podataka na trening, validacioni i testni skup bez vecih poteskoca. 
+Skup podataka ima dovoljnu količinu podataka za analizu – čak 50 hiljada linija, tako da ćemo moći da podelimo skup podataka na trening, validacioni i testni skup bez većih poteškoća. 
 
-Uzecemo 60% podataka za trening skup, dok cemo po 20% uzeti za validacioni i testni skup. 
+Uzećemo 60% podataka za trening skup, dok ćemo po 20% uzeti za validacioni i testni skup. 
 
 ```{r}
 
@@ -1247,20 +1242,20 @@ str(train)
 
 Ciljna promenljiva je trenutno tipa int, a nama je potrebna klasifikacija u 5 nivoa, zato pretvaramo rating u factor promenljivu.
 
-Takodje cemo promenljivu sentiment prebaciti u numericku, neki modeli rade samo sa numerickim vrednostima, a sentiment ima samo 3 nivoa (Negative, Neutral i Positive).
+Takođe ćemo promenljivu sentiment prebaciti u numeričku, neki modeli rade samo sa numeričkim vrednostima, a sentiment ima samo 3 nivoa (Negative, Neutral i Positive).
 
 
 # Pronalazak modela  
 
-Nad prediktorima koje smo odredili primenicemo nekoliko modela kako bismo nasli onaj koji najbolje opisuje nasu ciljnu promenljivu – rating. 
+Nad prediktorima koje smo odredili primenićemo nekoliko modela kako bismo našli onaj koji najbolje opisuje našu ciljnu promenljivu – rating. 
 
 ## KNN - K-Nearest Neighbors  
 
-Ovo je model koji se koristi za probleme klasifikacije. On predvidja klasu na osnovu klase njenih K najblizih suseda u prostoru karakteristika. Parametar K predstavlja broj suseda koje model uzima u obzir pri odlucivanju o klasi.
+Ovo je model koji se koristi za probleme klasifikacije. On predviđa klasu na osnovu klase njenih K najbližih suseda u prostoru karakteristika. Parametar K predstavlja broj suseda koje model uzima u obzir pri odlučivanju o klasi.
 
 Pokrenimo model, i postavimo parametar k na 7.
 
-Kako bismo mogli uspesno da prikazemo matricu konfuzije u ovom modelu, potrebno je najpre ciljnu promenljivu _rating_ prebaciti u kategorijsku (faktorsku).
+Kako bismo mogli uspešno da prikažemo matricu konfuzije u ovom modelu, potrebno je najpre ciljnu promenljivu _rating_ prebaciti u kategorijsku (faktorsku).
 ```{r}
 train$rating = factor(train$rating)
 validation$rating = factor(validation$rating)
@@ -1272,7 +1267,7 @@ knn_model <- kknn(rating ~ ., train, validation, k = 7, kernel = "triangular")
 pred <- fitted(knn_model)
 ```
 
-Za ovaj model cemo kreirati konfuzionu matricu.`
+Za ovaj model ćemo kreirati konfuzionu matricu.`
 
 ```{r}
 confusionMatrix(pred, validation$rating)
@@ -1280,19 +1275,19 @@ confusionMatrix(pred, validation$rating)
 
 Na prvi pogled vidimo da model ima solidnu preciznost.
 
-Prediction nam govori sta je model predvideo a Reference sta je stvarna vrednost u nasem skupu. 
+Prediction nam govori šta je model predvideo, a Reference šta je stvarna vrednost u nasem skupu. 
 
-- Accuracy (0.74) znaci da je 74% predikcija tacno, sto je solidno. 
+- Accuracy (0.74) znači da je 74% predikcija tačno, što je solidno. 
 
-Kappa (0.6757) - sto je takodje solidno.
+Kappa (0.6757) - što je takođe solidno.
 
-Sensitivity ( TP/(TP+FN) ) - u koliko procenata model tacno predvidi klasu - vidimo da je ovde raspon od 0.66 do 0.84. Malo bolje predidja klase 1 i 5 od ostalih (srednjih vrednosti). 
+Sensitivity ( TP/(TP+FN) ) - u koliko procenata model tačno predvidi klasu - vidimo da je ovde raspon od 0.66 do 0.84. Malo bolje prediđa klase 1 i 5 od ostalih (srednjih vrednosti). 
 
-Specificity ( TN/(TN+FP) ) - koliko model tacno predvidi da nesto nije ta klasa. Mozemo videti da je ovde prilicno predizan obzirom da su mu sve vrednosti iznad 0.9.
+Specificity ( TN/(TN+FP) ) - koliko model tacno predvidi da nešto nije ta klasa. Možemo videti da je ovde prilično precizan obzirom da su mu sve vrednosti iznad 0.9.
 
-Mozemo pokusati da poboljsamo model povecavanjem parametra K posto je ta vrednost konfigurabilna.
+Možemo pokušati da poboljšamo model povećavanjem parametra K pošto je ta vrednost konfigurabilna.
 
-Povecali smo broj suseda, odnosno K na 125, medjutim model i dalje pokazuje slicne rezultate.  
+Povećali smo broj suseda, odnosno K na 125, međutim model i dalje pokazuje slične rezultate.  
 
 ```{r}
 
@@ -1303,9 +1298,9 @@ confusionMatrix(pred_2, validation$rating)
 
 ```
 
-## Multinomialna Logisticka Regresija  
+## Multinomialna Logistička Regresija  
 
-MLR je model koji se koristi za probleme klasifikacije sa vise od dve klase, odnosno ne koristi se na binarnu klasifikaciju output-a. Predvidja verovatnocu pripadnosti svakoj klasi na osnovu prediktora, a zatim klasu sa najvecom verovatnocom bira kao predvidjenu.
+MLR je model koji se koristi za probleme klasifikacije sa više od dve klase, odnosno ne koristi se na binarnu klasifikaciju output-a. Predviđa verovatnoću pripadnosti svakoj klasi na osnovu prediktora, a zatim klasu sa najvećom verovatnoćom bira kao predviđenu.
 
 ```{r}
 
@@ -1325,18 +1320,18 @@ cm_mlr = confusionMatrix(mlr_predict, validation$rating)
 cm_mlr
 ```
 
-Iz matrice Prediction vs. Reference odmah vidimo da je model prilicno dobar - svakako ima gresaka ali greske su uglavnom za 1 (ako je prava ocena 4, model eventualno moze predvideti da je ocena 3 ili 5). 
+Iz matrice Prediction vs. Reference odmah vidimo da je model prilično dobar - svakako ima grešaka, ali greške su uglavnom za 1 (ako je prava ocena 4, model eventualno može predvideti da je ocena 3 ili 5). 
 
-- _Accuracy_ (0.77) - u 77% slucajeva je model tacno predvideo 
-- _Kappa_ (0.70) - ovo je sasvim zadovoljavajuca vrednost 
-- _Sensitivity_ ( TP/(TP+FN) ) - izmedju 0.71 i 0.79, znaci za sve klase je solidan, nema neke klase za koju model ne predvidja dobro 
-- _Specificity_ ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje sta nije odredjena klasa. 
+- _Accuracy_ (0.77) - u 77% slučajeva je model tačno predvideo 
+- _Kappa_ (0.70) - ovo je sasvim zadovoljavajuća vrednost 
+- _Sensitivity_ ( TP/(TP+FN) ) - između 0.71 i 0.79, znači za sve klase je solidan, nema neke klase za koju model ne predvidja dobro 
+- _Specificity_ ( TN/(TN+FP) ) - sve su preko 0.9, model solidno prepoznaje šta nije određena klasa. 
 
-Model je sasvim zadovoljavajuci, ali pokusacemo da pronadjemo jos bolji model. 
+Model je sasvim zadovoljavajući, ali pokusaćemo da pronađemo još bolji model. 
 
 ## Naive Bayes  
 
-Slican kao i MLR, predvidja klasu na osnovu verovatnoce svakog prediktora pretpostavljajuci da su svi prediktori nezavisni od drugog. Klasa sa najvecom kombinovanom verovatnocom se bira kao predvidjena.
+Sličan kao i MLR, predviđa klasu na osnovu verovatnoće svakog prediktora pretpostavljajući da su svi prediktori nezavisni od drugog. Klasa sa najvećom kombinovanom verovatnoćom se bira kao predviđena.
 
 ```{r}
 
@@ -1352,16 +1347,16 @@ cm_nb = confusionMatrix(nb_predict, validation$rating)
 cm_nb
 ```
 
-Iz matrice Prediction vs. Reference vidimo da je situacija slicna kao kod Multinomialne Logisticke Regresije, model uglavnom pogadja ili promasuje za 1 
+Iz matrice Prediction vs. Reference vidimo da je situacija slična kao kod Multinomialne Logističke Regresije, model uglavnom pogađa ili promašuje za 1. 
 
-- _Accuracy_ (0.61) - u 61% slucajeva je model tacno predvideo,  manje nego kod MLR 
-- _Kappa_ (0.52) - dosta niza vrednost nego kod MLR
-- _Sensitivity_ ( TP/(TP+FN) ) - izmedju 0.67 i 0.99, nije priblizan za sve klase, dosta bolje pogadja ako je klasa 1 ili 5 nego ostale  
-- _Specificity_ ( TN/(TN+FP) ) - sve su preko 0.9 osim 5, model solidno prepoznaje sta nije odredjena klasa, dosta slicno kao kod MLR. 
+- _Accuracy_ (0.61) - u 61% slučajeva je model tačno predvideo, manje nego kod MLR 
+- _Kappa_ (0.52) - dosta niža vrednost nego kod MLR
+- _Sensitivity_ ( TP/(TP+FN) ) - između 0.67 i 0.99, nije približan za sve klase, dosta bolje pogađa ako je klasa 1 ili 5 nego ostale  
+- _Specificity_ ( TN/(TN+FP) ) - sve su preko 0.9 osim 5, model solidno prepoznaje šta nije određena klasa, dosta slično kao kod MLR. 
 
-Model je za nijansu losije od prethodnog, nastavljamo sa drugim modelima. 
+Model je za nijansu lošiji od prethodnog, nastavljamo sa drugim modelima. 
 
-Probacemo neke kompleksnije modele, mozda nam daju bolje rezultate 
+Probaćemo neke kompleksnije modele, možda nam daju bolje rezultate 
 
 ## Support Vector Machine - SVM  
 
@@ -1375,7 +1370,7 @@ svm_predict = predict(svm_model, validation)
 cm_svm = confusionMatrix(svm_predict, validation$rating)
 ```
 
-Na osnvou metrika, mozemo reci da je SVM u rangu sa MLR i da je poprilicno dobar model. 
+Na osnvou metrika, možemo reći da je SVM u rangu sa MLR i da je poprilično dobar model. 
 
 ```{r}
 cm_svm
@@ -1383,9 +1378,9 @@ cm_svm
 
 ## Random Forest  
 
-Ovaj model se koristi i za probleme klasifikacije i regresije. On pravi veliki broj stabla odlucivanja pa se konacna odluka donosi izborom jednog.
+Ovaj model se koristi i za probleme klasifikacije i regresije. On pravi veliki broj stabala odlučivanja pa se konačna odluka donosi izborom jednog.
 
-Random Forest smo vec koristili za odredjivanje najbitnijih prediktora, ovaj put ga koristimo kao model za predikciju.
+Random Forest smo već koristili za određivanje najbitnijih prediktora, ovaj put ga koristimo kao model za predikciju.
 
 ```{r}
 
@@ -1397,7 +1392,7 @@ cm_rf = confusionMatrix(rf_predict, validation$rating)
 
 ```
 
-Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su slicni, cak za nijansu losiji nego kod ova dva modela.
+Očekivali smo da će dati bolje rezultate od MLR i SVC modela ali rezultati su slični, čak za nijansu lošiji nego kod ova dva modela.
 
 ```{r}
 cm_rf
@@ -1406,21 +1401,21 @@ cm_rf
 
 ## XGBoost  
 
-XGBoost je napredna metoda koja kombinuje vise odlucujucih stabala da bi stvorila precizan model, uz regularizaciju koja smanjuje overfitting.
+XGBoost je napredna metoda koja kombinuje više odlučujućih stabala da bi stvorila precizan model, uz regularizaciju koja smanjuje overfitting.
 
-Prvo cemo odraditi pripremu podataka za xgboost
-Xgboost zahteva numericke matrice - label za XGB mora biti numeric (klase 0,1,2,3...).
+Prvo ćemo odraditi pripremu podataka za xgboost
+Xgboost zahteva numeričke matrice - label za XGB mora biti numeric (klase 0,1,2,3...).
 
 ```{r}
 train_matrix <- as.matrix(train[, -7])
-train_label <- as.numeric(train$rating) - 1  # XGBoost klase moraju poceti od 0
+train_label <- as.numeric(train$rating) - 1  # XGBoost klase moraju početi od 0
 
 validation_matrix <- as.matrix(validation[, -7])
 validation_label <- as.numeric(validation$rating) - 1
 
 ```
 
-Kreiranje dmatrix objekata. Dmatrix nam treba iskljucivo kod xgboost-a jer je to posebna optimizovana struktura podataka koju XGBoost koristi da bi bio brzi, manje trosio memoriju...
+Kreiranje dmatrix objekata. Dmatrix nam treba isključivo kod xgboost-a, jer je to posebna optimizovana struktura podataka koju XGBoost koristi da bi bio brži, manje trošio memoriju...
 
 ```{r}
 dtrain <- xgb.DMatrix(data = train_matrix, label = train_label)
@@ -1482,8 +1477,8 @@ cm_xg_boost
 
 ```
 
-Tacnost na validacionom skupu:
-Ukupna tacnost (Accuracy): 76%
+Tačnost na validacionom skupu:
+Ukupna tačnost (Accuracy): 76%
 Kappa koeficijent: 0.7
 
 Model podjednako dobro klaifikuje sve klase.
@@ -1491,11 +1486,11 @@ XGBoost je dao skoro iste rezultate kao MLR.
 
 ## Smanjenje broja prediktora  
 
-Posto su modeli solidni, mozemo probati da ih poboljsamo koriscenjem promenljive **_avg_rating_** koju smo kreirari kao prosecnu ocenu promenljivih koje se zavrsavaju sa _rating_.
+Pošto su modeli solidni, možemo probati da ih poboljšamo korišćenjem promenljive **_avg_rating_** koju smo kreirari kao prosečnu ocenu promenljivih koje se završavaju sa _rating_.
 
-Dodatno, gore smo utvrdili da ne postoji jaka multikolinearnost izmedju ovih prediktora, ali posto je ona umerena mozemo pokusati da poboljsamo model na ovaj nacin. 
+Dodatno, gore smo utvrdili da ne postoji jaka multikolinearnost između ovih prediktora, ali pošto je ona umerena možemo pokušati da poboljšamo model na ovaj način. 
 
-Kako bismo ostali konzistentni u koriscenju trening, validacionog i testnog skupa tokom uporedjivanja svih modela, na vec definisane skupove cemo dodati izracunatu promenljivu _avg_rating_.
+Kako bismo ostali konzistentni u korišćenju trening, validacionog i testnog skupa tokom upoređivanja svih modela, na već definisane skupove ćemo dodati izračunatu promenljivu _avg_rating_.
 
 ```{r}
 train = train %>%
@@ -1508,7 +1503,7 @@ test = test %>%
   mutate(avg_rating = rowMeans(across(ends_with("_rating"))))
 ```
 
-Provericemo da li je kolona ispravno dodata u skup podataka. Vidimo da postoji promenljiva _avg_rating_ i da je numerickog tipa. Ona predstavlja prosecnu ocenu promenljivih sa sufiksom _rating_.
+Proverićemo da li je kolona ispravno dodata u skup podataka. Vidimo da postoji promenljiva _avg_rating_ i da je numeričkog tipa. Ona predstavlja prosečnu ocenu promenljivih sa sufiksom _rating_.
 
 ```{r}
 head(train)
@@ -1525,7 +1520,7 @@ mlr_model_reduced = multinom(rating ~ avg_rating + sentiment, data = train)
 
 ```
 
-Ovaj model je podjednako dobar i u ovom slucaju, kada su samo _sentiment_ i _avg_rating_ ukljuceni. Ovo treba imati u vidu, zbog kompleksnosti modela. Ovako dobijeni model ima manju kompleksnost jer ima manji broj prediktora. 
+Ovaj model je podjednako dobar i u ovom slučaju, kada su samo _sentiment_ i _avg_rating_ uključeni. Ovo treba imati u vidu, zbog kompleksnosti modela. Ovako dobijeni model ima manju kompleksnost, jer ima manji broj prediktora. 
 
 ```{r}
 
@@ -1539,8 +1534,8 @@ cm_mlr_reduced
 
 ## Naive Bayes sa _avg_rating_  
 
-Solidan rezultat, mada je ovaj model pokazao losije rezultate od modela sa vecim brojem prediktora. Ovaj model ima accuracy 0.61, dok onaj sa vecim brojem prediktora ima 0.66.
-Svakako, MLR se jos uvek najbolje pokazao.
+Solidan rezultat, mada je ovaj model pokazao lošije rezultate od modela sa većim brojem prediktora. Ovaj model ima accuracy 0.61, dok onaj sa većim brojem prediktora ima 0.66.
+Svakako, MLR se još uvek najbolje pokazao.
 
 ```{r}
 
@@ -1556,7 +1551,7 @@ cm_nb_reduced
 
 ## Support Vector Machine - SVM sa _avg_rating_  
 
-Odlican rezultat i za ovaj model. Takodje, za nijansu je bolji od istog modela sa vecim brojem prediktora.
+Odličan rezultat i za ovaj model. Takođe, za nijansu je bolji od istog modela sa većim brojem prediktora.
 ```{r}
 
 svm_model_reduced = svm(rating ~ avg_rating + sentiment, data = train, kernel = "radial", cost = 10, gamma = 0.01, scale = TRUE)
@@ -1576,8 +1571,8 @@ SVM je sasvim dobar model, u rangu sa MLR.
 
 ## Random Forest sa _avg_rating_  
 
-Pokusajmo da vidimo kakve rezultate ce nam dati Random Forest kada mu smanjimo broj prediktora.
-Probacemo i sa manjim brojem stabala da bismo smanjili kompleksnost modela - ako dobijemo slicne metrike onda je bolje da imamo manji broj stabala (ntree)
+Pokušajmo da vidimo kakve rezultate će nam dati Random Forest kada mu smanjimo broj prediktora.
+Probaćemo i sa manjim brojem stabala da bismo smanjili kompleksnost modela - ako dobijemo slične metrike onda je bolje da imamo manji broj stabala (ntree)
 
 ```{r}
 
@@ -1591,7 +1586,7 @@ cm_rf_reduced
 
 ```
 
-Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su slicni, cak za nijansu losiji nego kod ova dva modela.
+Očekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su slični, čak za nijansu lošiji nego kod ova dva modela.
 
 <span style="color:red;">[Dodato]</span>  
 
@@ -1600,14 +1595,14 @@ Ocekivali smo da ce dati bolje rezultate od MLR i SVC modela ali rezultati su sl
 Ukoliko bismo ciljnu promenljivu podelili u dve kategorije:
 - Visoka ocena
 - Niska ocena
-mogli bismo postici bolje rezultate predikcije.
+mogli bismo postići bolje rezultate predikcije.
 
-Na ovaj nacin bismo mogli dobiti klasifikaciju umesto precizne predikcije, sto je u nasem skupu podataka sasvim dovoljno.
+Na ovaj način bismo mogli dobiti klasifikaciju umesto precizne predikcije, što je u našem skupu podataka sasvim dovoljno.
 
-Najpre cemo nad trening, test i validacionim skupom podataka odraditi racunanje i preslikavanje vrednosti _rating_ u novu kolonu. 
-Ukoliko je _rating_ ocenjen sa 1 ili 2 tada cemo model telefona smatrati losim, dok cemo vecu ocenu smatrati dobrim odnosno visokom ocenom.
+Najpre ćemo nad trening, test i validacionim skupom podataka odraditi računanje i preslikavanje vrednosti _rating_ u novu kolonu. 
+Ukoliko je _rating_ ocenjen sa 1 ili 2 tada ćemo model telefona smatrati lošim, dok ćemo veću ocenu smatrati dobrim odnosno visokom ocenom.
 
-Kreirajmo kolonu _high_rating_ koja ce sadrzati ove vrednosti.
+Kreirajmo kolonu _high_rating_ koja će sadržati ove vrednosti.
 U ovoj koloni, vrednost 1 predstavlja visoku ocenu (3, 4 ili 5), vrednost 0 nisku ocenu (1 ili 2).
 
 ```{r}
@@ -1629,14 +1624,14 @@ test$high_rating = factor(test$high_rating)
 validation$high_rating = factor(validation$high_rating)
 ```
 
-Pogledajmo strukturu podataka sada. Mozemo videti da su vrednosti za _rating_ mapisane kao 0 (Los kvalitet) u koloni _high_rating_ dok su vise vrednosti mapisane kao 1 (Dobar kvalitet).
+Pogledajmo strukturu podataka sada. Možemo videti da su vrednosti za _rating_ mapirane kao 0 (Loš kvalitet) u koloni _high_rating_ dok su više vrednosti mapirane kao 1 (Dobar kvalitet).
 ```{r}
 str(train)
 ```
 
 <span style="color:red;">[Dodato]</span>  
 
-## Binarna logisticka regresija  
+## Binarna logistička regresija  
 
 ```{r}
 
@@ -1666,9 +1661,9 @@ cm_binary_output
 ```
 <span style="color:red;">[Dodato]</span>  
 
-## Uporedjivanje modela kroz metrike  
+## Upoređivanje modela kroz metrike  
 
-Za svaki od kreiranih modela odradicemo sledece metrike na osnovu matrice konfuzije.
+Za svaki od kreiranih modela odradićemo sledeće metrike na osnovu matrice konfuzije.
 
 ```{r}
 calc_metrics <- function(cm){
@@ -1752,21 +1747,21 @@ all_metrics <- data.frame(
 print(all_metrics)
 
 ```
-Na osnovu tabele iznad mozemo zakljuciti da je multinominalna regresija dala najbolje rezultate za obe varijante (sa _avg_rating_ i sa svim ostalim prediktorima).
+Na osnovu tabele iznad možemo zaključiti da je multinominalna regresija dala najbolje rezultate za obe varijante (sa _avg_rating_ i sa svim ostalim prediktorima).
 Model koji koristi binarizaciju output-a dao je najbolje rezultate.
 
 
 # MLFlow
 
-MLFlow je MLOps alat koji omogucava pracenje eksperimenata u masinskom ucenju, ukljucujuci cuvanje parametara, metrika, modela i artifakata vezanih za modele.
-Njegova svrha je da nam olaksa poredjenje razlicitih modela i verzija tokom razvoja.
-Omogucava nam da imamo sve modele na jednom mestu sto nam olaksava izbor najboljeg modela za dalju upotrebu.
+MLFlow je MLOps alat koji omogućava praćenje eksperimenata u mašinskom učenju, uključujući čuvanje parametara, metrika, modela i artifakata vezanih za modele.
+Njegova svrha je da nam olakša poređenje različitih modela i verzija tokom razvoja.
+Omogućava nam da imamo sve modele na jednom mestu što nam olakšava izbor najboljeg modela za dalju upotrebu.
 
 
 ## Instalacija MLFlow
 
-MLFlow se moze koristiti u lokalnom okruzenju (localhost), a postoji mogucnost i da se koristi kao samostalni server ili u cloud infrastrukturi.
-U nasem primeru MLFlow je instaliran lokalno - to nam omogucava jednostavno pokretanje istog i pregled rezultata u korisnickom interfejsu (UI-u) u svom browser-u.
+MLFlow se može koristiti u lokalnom okruženju (localhost), a postoji mogućnost i da se koristi kao samostalni server ili u cloud infrastrukturi.
+U našem primeru MLFlow je instaliran lokalno - to nam omogućava jednostavno pokretanje istog i pregled rezultata u korisničkom interfejsu (UI-u) u svom browser-u.
 Lokalna instalacija je sasvim dovoljna za demonstraciju osnovnih MLFlow funkcionalnosti.
 
 U nastavku je primer instalacije na Linux operativnom sistemu (Ubuntu 24.04):
@@ -1774,28 +1769,28 @@ U nastavku je primer instalacije na Linux operativnom sistemu (Ubuntu 24.04):
 1. instaliramo **pipx** - alat za instalaciju Python aplikacija
 _sudo apt install -y pipx_
 
-2. dodajemo **pipx** u path varijablu - ovo nam omogucava da mozemo da ga izvrsavamo sa bilo koje lokacije na nasem racunaru
+2. dodajemo **pipx** u path varijablu - ovo nam omogućava da možemo da ga izvršavamo sa bilo koje lokacije na našem računaru
 _pipx ensurepath_
 
 3. Instalacija **MLFlow-a**
 _pipx install mlflow_
 
-4. dodajemo mlflow u path - opet da bismo mogli da ga izvrsavamo sa bilo koje lokacije na racunaru
+4. dodajemo mlflow u path - opet da bismo mogli da ga izvršavamo sa bilo koje lokacije na računaru
 _echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc_
 _source ~/.bashrc_
 
-5. proveravamo da li smo uspesno instalirali MLFlow
+5. proveravamo da li smo uspešno instalirali MLFlow
 _mlflow --version_
 Ispis treba da bude ovakav (eventualno druga verzija):
 _mlflow, version 3.8.1_
 
 
-Nakon sto je ovo zavrseno i validirano je da imamo instaliran MLFlow instaliran na nasem racunaru, moramo instalirati i potrebne R pakete - **git2r** i **mlflow**
+Nakon što je ovo završeno i validirano je da imamo instaliran MLFlow instaliran na našem racunaru, moramo instalirati i potrebne R pakete - **git2r** i **mlflow**
 _install.packages("git2r")_
 _install.packages("mlflow")_
 
 
-Potrebno je ucitati samo mlflow library u R-u, git2r je samo zavisnost koja nam je potrebna za njegovo koriscenje.
+Potrebno je učitati samo mlflow library u R-u, git2r je samo zavisnost koja nam je potrebna za njegovo korišćenje.
 ```{r}
 
 library(mlflow)
@@ -1805,12 +1800,12 @@ library(mlflow)
 
 ## Pokretanje MLFlow
 
-Sve sto treba da uradimo je da iz terminala pokrenemo sledecu komandu:
+Sve što treba da uradimo je da iz terminala pokrenemo sledeću komandu:
 _mlflow ui_
-Zatim u browser-u otvorimo http://127.0.0.1:5000 (ili http://localhost:5000) i mozemo videti spreman MLFlow UI
+Zatim u browser-u otvorimo http://127.0.0.1:5000 (ili http://localhost:5000) i možemo videti spreman MLFlow UI
 
 
-U R-u moramo dodati **environment varijable** potrebne za komunikaciju izmedju MLFlow klijenta i servera.
+U R-u moramo dodati **environment varijable** potrebne za komunikaciju između MLFlow klijenta i servera.
 
 ```{r}
 Sys.setenv(
@@ -1821,7 +1816,7 @@ Sys.setenv(
 ```
 
 
-Sledeca komanda nam govori na kojoj lokaciji se trenutno cuvaju logovi poslati sa mlflow klijenta.
+Sledeća komanda nam govori na kojoj lokaciji se trenutno čuvaju logovi poslati sa mlflow klijenta.
 
 ```{r}
 
@@ -1838,9 +1833,9 @@ mlflow_set_tracking_uri("http://127.0.0.1:5000")
 ```
 
 
-## Validacija komunikacije izmedju MLFlow klijenta i servera
+## Validacija komunikacije između MLFlow klijenta i servera
 
-Odradicemo jedan minimalni test kojim cemo proveriti da li je sve ispravno podeseno i da li MLFlow klijent iz R-a salje logove na pravo mesto (MLFlow UI).
+Odradićemo jedan minimalni test kojim ćemo proveriti da li je sve ispravno podeseno i da li MLFlow klijent iz R-a šalje logove na pravo mesto (MLFlow UI).
 
 ```{r}
 
@@ -1866,20 +1861,20 @@ mlflow_end_run()
 
 ```
 Nakon ovoga bi trebalo da je testni eksperiment vidljiv u mlflow UI (u Experiments).
-Takodje u okviru eksperimenta mozemo videti "run" koji smo u okviru njega izversili i metriku koju smo poslali.
+Takođe u okviru eksperimenta možemo videti "run" koji smo u okviru njega izvršili i metriku koju smo poslali.
 
 <span style="color:red;">[Dodato]</span>  
 
-## Poredjenje modela  
+## Poređenje modela  
 
-Nakon sto smo prosli inicijalno podesavanje, mozemo preci na poredjenje nasih modela koristeci MLFlow.
+Nakon što smo prosli inicijalno podešavanje, možemo preći na poređenje naših modela koristeći MLFlow.
 
-Postupak je prilicno pravolinijski:
-1. Pokrenemo jedan **eksperiment** u kome ce biti svi nasi modeli
-2. Pokrenemo **run** za svaki model (uz svaki model saljemo njegove parametre, metrike dobijene predikcijom nad trening i test skupom i artefakte - npr. .png fajl sa slikom confusion matrice i/ili model kao .rds fajl)
+Postupak je prilično pravolinijski:
+1. Pokrenemo jedan **eksperiment** u kome će biti svi naši modeli
+2. Pokrenemo **run** za svaki model (uz svaki model šaljemo njegove parametre, metrike dobijene predikcijom nad trening i test skupom i artefakte - npr. .png fajl sa slikom confusion matrice i/ili model kao .rds fajl)
 3. U MLFlow UI-u uporedimo modele po metrikama i izaberemo onaj koji se pokazao kao najbolji
-4. Najbolji model oznacavamo kao produkcioni
-5. Nakon toga mozemo ucitati najbolji model u R i koristiti ga za predvidjanje
+4. Najbolji model označavamo kao produkcioni
+5. Nakon toga možemo učitati najbolji model u R i koristiti ga za predviđanje
 
 
 
@@ -1887,11 +1882,11 @@ Postupak je prilicno pravolinijski:
 mlflow_set_experiment("Global_Mobile_Reviews_Models_Exp_01")
 ```
 
-Nakon sto smo pokrenuli eksperiment, slacemo jedan po jedan model zajedno sa parametrima i metrikama u MLFlow.
-Koristicemo modele koje smo vec napravili u prethodnim koracima.
+Nakon sto smo pokrenuli eksperiment, slaćemo jedan po jedan model zajedno sa parametrima i metrikama u MLFlow.
+Koristićemo modele koje smo već napravili u prethodnim koracima.
 
 
-## Multinomijalna Logisticka Regresija  
+## Multinomijalna Logistička Regresija  
 
 
 ```{r}
@@ -1905,7 +1900,7 @@ mlflow_log_param("model_type", "Multinomial_Logistic_Regresion")
 mlflow_log_param("predictors_count", 6)
 ```
 
-Prvo cemo odraditi predikciju na trening i test skupu koristeci nas MLR model
+Prvo ćemo odraditi predikciju na trening i test skupu koristeci nas MLR model
 
 ```{r}
 test$rating = factor(test$rating)
@@ -1921,7 +1916,7 @@ cm_train = confusionMatrix(pred_train, train$rating)
 cm_test = confusionMatrix(pred_test, test$rating)
 ```
 
-Logovacemo metrike iz matrice konfuzije u MLFlow
+Logovaćemo metrike iz matrice konfuzije u MLFlow
 
 ```{r}
 mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
@@ -1931,7 +1926,7 @@ mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
 mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
 ```
 
-Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+Takođe možemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
 
 ```{r}
 
@@ -1953,7 +1948,7 @@ plot_cm(cm_test, "cm_mlr_test.png")
 mlflow_log_artifact("cm_mlr_test.png")
 
 ```
-Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+Model cemo takođe logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaže kao najbolji
 
 ```{r}
 saveRDS(mlr_model, "mlr_model.rds")
@@ -1968,9 +1963,9 @@ mlflow_end_run()
 ```
 
 
-## Multinomijalna Logisticka Regresija sa redukovanim brojem prediktora  
+## Multinomijalna Logistička Regresija sa redukovanim brojem prediktora  
 
-Koristicemo i model multinomijale logisticke regresije sa _avg_rating_ + _sentiment_ u MLFlow.
+Koristićemo i model multinomijale logističke regresije sa _avg_rating_ + _sentiment_ u MLFlow.
 Postupak je isti kao za prethodni model, samo se parametri razlikuju.
 
 ```{r}
@@ -1984,7 +1979,7 @@ mlflow_log_param("model_type", "Multinomial_Logistic_Regresion")
 mlflow_log_param("predictors_count", 2)
 ```
 
-Prvo cemo odraditi predikciju na trening i test skupu koristeci nas MLR REDUCED model
+Prvo ćemo odraditi predikciju na trening i test skupu koristeći naš MLR REDUCED model
 
 ```{r}
 
@@ -1999,7 +1994,7 @@ cm_train = confusionMatrix(pred_train, train$rating)
 cm_test = confusionMatrix(pred_test, test$rating)
 ```
 
-Logovacemo metrike iz matrice konfuzije u MLFlow
+Logovaćemo metrike iz matrice konfuzije u MLFlow
 
 ```{r}
 mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
@@ -2009,7 +2004,7 @@ mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
 mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
 ```
 
-Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+Takođe možemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
 
 ```{r}
 
@@ -2018,7 +2013,7 @@ plot_cm(cm_test, "cm_mlr_reduced_test.png")
 mlflow_log_artifact("cm_mlr_reduced_test.png")
 
 ```
-Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+Model ćemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
 
 ```{r}
 saveRDS(mlr_model_reduced, "mlr_model_reduced.rds")
@@ -2051,7 +2046,7 @@ mlflow_log_param("mtry", 3)
 
 ```
 
-Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model
+Prvo ćemo odraditi predikciju na trening i test skupu koristeći nas Random Forest model
 
 ```{r}
 pred_train = predict(rf_model, newdata = train)
@@ -2065,7 +2060,7 @@ cm_train = confusionMatrix(pred_train, train$rating)
 cm_test = confusionMatrix(pred_test, test$rating)
 ```
 
-Logovacemo metrike iz matrice konfuzije u MLFlow
+Logovaćemo metrike iz matrice konfuzije u MLFlow
 
 ```{r}
 mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
@@ -2075,7 +2070,7 @@ mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
 mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
 ```
 
-Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+Takođe možemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
 
 ```{r}
 
@@ -2084,7 +2079,7 @@ plot_cm(cm_test, "cm_rf_test.png")
 mlflow_log_artifact("cm_rf_test.png")
 
 ```
-Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+Model ćemo takođe logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaže kao najbolji
 
 ```{r}
 saveRDS(rf_model, "rf_model.rds")
@@ -2116,21 +2111,21 @@ mlflow_log_param("mtry", 2)
 
 ```
 
-Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model sa smanjenim brojem prediktora
+Prvo ćemo odraditi predikciju na trening i test skupu koristeći naš Random Forest model sa smanjenim brojem prediktora
 
 ```{r}
 pred_train = predict(rf_model_reduced, newdata = train)
 pred_test = predict(rf_model_reduced, newdata = test)
 ```
 
-Zatim pravimo confision matrix za oba skupa 
+Zatim pravimo confusion matrix za oba skupa 
 
 ```{r}
 cm_train = confusionMatrix(pred_train, train$rating)
 cm_test = confusionMatrix(pred_test, test$rating)
 ```
 
-Logovacemo metrike iz matrice konfuzije u MLFlow
+Logovaćemo metrike iz matrice konfuzije u MLFlow
 
 ```{r}
 mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
@@ -2140,7 +2135,7 @@ mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
 mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
 ```
 
-Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+Takođe možemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
 
 ```{r}
 
@@ -2149,7 +2144,7 @@ plot_cm(cm_test, "cm_rf_reduced_test.png")
 mlflow_log_artifact("cm_rf_reduced_test.png")
 
 ```
-Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+Model ćemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaže kao najbolji
 
 ```{r}
 saveRDS(rf_model_reduced, "rf_model_reduced.rds")
@@ -2165,8 +2160,8 @@ mlflow_end_run()
 
 ## Random Forest sa redukovanim brojem prediktora i ntree = 200  
 
-Napravicemo i Random Forest model sa vecim brojem stabala.
-Time povecavamo kompleksnost modela, ali moze da se desi da predvidjanje bude bolje.
+Napravićemo i Random Forest model sa većim brojem stabala.
+Time povećavamo kompleksnost modela, ali može da se desi da predviđanje bude bolje.
 
 ```{r}
 rf_model_reduced_2 = randomForest(rating ~ avg_rating + sentiment, data = train, ntree = 200, mtry = 2, importance = TRUE)
@@ -2187,21 +2182,21 @@ mlflow_log_param("mtry", 2)
 
 ```
 
-Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model sa smanjenim brojem prediktora
+Prvo ćemo odraditi predikciju na trening i test skupu koristeći naš Random Forest model sa smanjenim brojem prediktora
 
 ```{r}
 pred_train = predict(rf_model_reduced_2, newdata = train)
 pred_test = predict(rf_model_reduced_2, newdata = test)
 ```
 
-Zatim pravimo confision matrix za oba skupa 
+Zatim pravimo confusion matrix za oba skupa 
 
 ```{r}
 cm_train = confusionMatrix(pred_train, train$rating)
 cm_test = confusionMatrix(pred_test, test$rating)
 ```
 
-Logovacemo metrike iz matrice konfuzije u MLFlow
+Logovaćemo metrike iz matrice konfuzije u MLFlow
 
 ```{r}
 mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
@@ -2211,7 +2206,7 @@ mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
 mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
 ```
 
-Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+Takodje možemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
 
 ```{r}
 
@@ -2220,7 +2215,7 @@ plot_cm(cm_test, "cm_rf_reduced_2_test.png")
 mlflow_log_artifact("cm_rf_reduced_2_test.png")
 
 ```
-Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+Model ćemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaže kao najbolji
 
 ```{r}
 
@@ -2240,7 +2235,7 @@ mlflow_end_run()
 
 ## Support Vector Machine (SVM) Model  
 
-Prvo cemo logovati SVM model sa 6 prediktora koji smo ranije napravili.
+Prvo ćemo logovati SVM model sa 6 prediktora koji smo ranije napravili.
 
 ```{r}
 mlflow_start_run()
@@ -2257,21 +2252,21 @@ mlflow_log_param("gama", 1/ncol(train))
 
 ```
 
-Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model sa smanjenim brojem prediktora
+Prvo ćemo odraditi predikciju na trening i test skupu koristeći naš Random Forest model sa smanjenim brojem prediktora
 
 ```{r}
 pred_train = predict(svm_model, newdata = train)
 pred_test = predict(svm_model, newdata = test)
 ```
 
-Zatim pravimo confision matrix za oba skupa 
+Zatim pravimo confusion matrix za oba skupa 
 
 ```{r}
 cm_train = confusionMatrix(pred_train, train$rating)
 cm_test = confusionMatrix(pred_test, test$rating)
 ```
 
-Logovacemo metrike iz matrice konfuzije u MLFlow
+Logovaćemo metrike iz matrice konfuzije u MLFlow
 
 ```{r}
 mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
@@ -2281,7 +2276,7 @@ mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
 mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
 ```
 
-Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+Takođe možemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
 
 ```{r}
 
@@ -2290,7 +2285,7 @@ plot_cm(cm_test, "cm_svm_test.png")
 mlflow_log_artifact("cm_svm_test.png")
 
 ```
-Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+Model ćemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaže kao najbolji
 
 ```{r}
 
@@ -2311,7 +2306,7 @@ mlflow_end_run()
 
 ## Support Vector Machine (SVM) Model sa redukovanim brojem prediktora (sa _avg_rating_)  
 
-Logovacemo i SVM model sa 2 prediktora (avg_rating i sentiment)
+Logovaćemo i SVM model sa 2 prediktora (avg_rating i sentiment)
 
 ```{r}
 mlflow_start_run()
@@ -2328,21 +2323,21 @@ mlflow_log_param("gama", 0.01)
 
 ```
 
-Prvo cemo odraditi predikciju na trening i test skupu koristeci nas Random Forest model sa smanjenim brojem prediktora
+Prvo ćemo odraditi predikciju na trening i test skupu koristeći naš Random Forest model sa smanjenim brojem prediktora
 
 ```{r}
 pred_train = predict(svm_model_reduced, newdata = train)
 pred_test = predict(svm_model_reduced, newdata = test)
 ```
 
-Zatim pravimo confision matrix za oba skupa 
+Zatim pravimo confusion matrix za oba skupa 
 
 ```{r}
 cm_train = confusionMatrix(pred_train, train$rating)
 cm_test = confusionMatrix(pred_test, test$rating)
 ```
 
-Logovacemo metrike iz matrice konfuzije u MLFlow
+Logovaćemo metrike iz matrice konfuzije u MLFlow
 
 ```{r}
 mlflow_log_metric("accuracy_train", cm_train$overall["Accuracy"])
@@ -2352,7 +2347,7 @@ mlflow_log_metric("accuracy_test", cm_train$overall["Accuracy"])
 mlflow_log_metric("kappa_test", cm_train$overall["Kappa"])
 ```
 
-Takodje mozemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
+Takođe možemo logovati i artefakt u vidu .png fajla koji prikazuje matricu konfuzije
 
 ```{r}
 
@@ -2361,7 +2356,7 @@ plot_cm(cm_test, "cm_svm_reduced_test.png")
 mlflow_log_artifact("cm_svm_reduced_test.png")
 
 ```
-Model cemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaze kao najbolji
+Model ćemo takodje logovati kao artefakt da bismo ga kasnije mogli koristiti ukoliko se pokaže kao najbolji
 
 ```{r}
 
@@ -2376,9 +2371,9 @@ mlflow_end_run()
 
 ```
 
-## Koriscenje najboljeg modela  
+## Korišćenje najboljeg modela  
 
-Nakon sto smo u MLFlow UI-u odabrali koji je najbolji model, mozemo ga ucitati sa MLFlow servera za dalje koriscenje.
+Nakon što smo u MLFlow UI-u odabrali koji je najbolji model, možemo ga učitati sa MLFlow servera za dalje korišćenje.
 Dakle, koristimo .rds artefakt koji je vezan za najbolji model ranije u nasem radu.
 
 ```{r}
@@ -2390,7 +2385,7 @@ cm_best_model = confusionMatrix(pred, test$rating)
 
 cm_best_model
 ```
-Zakljucno sa ovim mozemo reci da smo iskoristili MLFlow server za bolju organizaciju modela i laksi odabir najboljeg.
+Zaključno sa ovim možemo reći da smo iskoristili MLFlow server za bolju organizaciju modela i lakši odabir najboljeg.
 
 
 
