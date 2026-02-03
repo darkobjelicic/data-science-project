@@ -30,6 +30,7 @@ library(e1071)
 library(kknn)
 library(rpart)
 library(xgboost)
+library(pROC)
 ```
 
 ## Učitavanje skupa podataka
@@ -572,11 +573,20 @@ ggplot(reviews, aes(x = factor(battery_life_rating), fill = factor(rating))) +
 
 ```
 
-Dodatno, proverićemo pomoću funkcije _cor()_ zavisnost između dve promenljive. Vidimo da postoji umereno jaka zavisnost između ove dve promenljive, tako da je _battery_life_rating_ dobar kandidat za prediktora.
+Dodatno, proverićemo pomoću Kruskal-Wallis testa zavisnost između dve promenljive.
+Ispod mozemo videti tri vrednosti:
+- _chi-squared_ meri razliku izmedju grupa tj. kategorija unutar promenljive _battery_life_rating_
+- _df_ oznacava koliko imamo kategorija u promenljivoj _battery_life_rating_ - 1
+- _p-value_ je verovatnoca da se ovakav rezultat dobije slucajno 
+
+Nulta hipoteza: Ne postoji razlika u distribuciji _rating_ na osnovu kategorija promenljive _battery_life_rating_.
+Ako je p-value mala, tada se nulta hipoteza odbacuje (postoji razlika između grupa).
+
+Na osnovu ovih vrednosti, ovaj test pokazuje jasnu zavisnost između ove dve promenljive.
 
 ```{r}
 # Korelacija
-cor(reviews$battery_life_rating, reviews$rating)
+kruskal.test(rating ~ battery_life_rating, data = reviews)
 ```
 
 <span style="color:red;">[Izmenjeno]</span>  
@@ -600,10 +610,10 @@ ggplot(reviews, aes(x = factor(camera_rating), fill = factor(rating))) +
   theme_minimal()
 ```
 
-Ispod možemo videti visoku vrednost i funkcije _cor()_ za odnos sa ciljnom promenljivom. I ova promenljiva pokazuje umereno jaku korelaciju sa ciljnom promenljivom.
+Ispod možemo videti jasnu zavisnost i između ove dve promenljive, što je i grafik iznad prikazao.
 
 ```{r}
-cor(reviews$camera_rating, reviews$rating)
+kruskal.test(rating ~ camera_rating, data = reviews)
 ```
 
 <span style="color:red;">[Izmenjeno]</span>  
@@ -620,9 +630,9 @@ ggplot(reviews, aes(x = factor(performance_rating), fill = factor(rating))) +
   theme_minimal()
 ```
 
-Da bismo potvrdili zaključak sa grafika, možemo pogledati i rezultat funkcije _cor()_ koji meri stepen korelacije između ove dve promenljive. Vrednost jasno ukazuje da postoji međusobna zavisnost.
+Da bismo potvrdili zaključak sa grafika, možemo pogledati i rezultat Kurskal-Wallis testa. Na osnovu rezultata mozemo primetiti da je i ova promenljiva statistički značajna za promenljivu _rating_.
 ```{r}
-cor(reviews$performance_rating, reviews$rating)
+kruskal.test(rating ~ performance_rating, data = reviews)
 ```
 
 <span style="color:red;">Izmenjeno</span>  
@@ -639,9 +649,9 @@ ggplot(reviews, aes(x = factor(design_rating), fill = factor(rating))) +
 ```
 
 
-I za ovu promenljivu, funkcija _cor()_ pokazuje visok stepen korelacije sa ciljnom promenljivom.
+I za ovu promenljivu, vidi se visok stepen povezanosti sa ciljnom promenljivom.
 ```{r}
-cor(reviews$design_rating, reviews$rating)
+kruskal.test(rating ~ design_rating, data = reviews)
 ```
 
 <span style="color:red;">Izmenjeno</span>  
@@ -660,7 +670,7 @@ ggplot(reviews, aes(x = factor(display_rating), fill = factor(rating))) +
 
 
 ```{r}
-cor(reviews$display_rating, reviews$rating)
+kruskal.test(rating ~ display_rating, data = reviews)
 ```
 
 ## Dosadašnji zakljucak  
@@ -1154,27 +1164,24 @@ Pogledajmo strukturu promenljivih unutar _reviews_important_vars_.
 str(reviews_important_vars)
 ```
 
-Vidimo da je jedino još promenljiva _sentiment_ faktorskog tipa. Nju ćemo prebacitit u numeričku obzirom da funkcija _cor()_ koju ćemo upotrebiti da proverimo multikolinearnost radi isključivo sa numeričkim vrednostima.
-
+Vidimo da je jedino još promenljiva _sentiment_ faktorskog tipa. Nju ćemo prebacitit u numeričku.
 ```{r}
 reviews_important_vars$sentiment = as.numeric(factor(reviews_important_vars$sentiment))
 ```
 
 Pokrenimo funckiju _cor()_ nad skupom podataka koji sadrži odabrane prediktore i ciljnu promenljivu.
 
-Trenutno nas ne zanima korelacija izmedju promenljive _rating_ i ostalih zato što je to ciljna promenljiva. Ono što nas zanima jeste da li je vrednost izmedju dva prediktora veća od 0.8 što bi ukazivalo na visoku multikolineranost.
+Trenutno nas ne zanima korelacija izmedju promenljive _rating_ i ostalih zato što je to ciljna promenljiva tako da cemo je izbaciti. Ono što nas zanima jeste da li je vrednost izmedju dva prediktora veća od 0.8 što bi ukazivalo na visoku multikolineranost.
 
-U tabeli ispod možemo videti da je korelisanost između prediktora maksimalno 0.59 što je umerena korelacija i ne predstavlja problem u našem skupu podatka.
+U tabeli ispod možemo videti da je korelisanost između prediktora maksimalno 0.60 što je umerena korelacija i ne predstavlja problem u našem skupu podatka.
 
 ```{r}
-cor = cor(reviews_important_vars)
+cor = cor(reviews_important_vars[, -ncol(reviews_important_vars)], method = "spearman")
 
 cor
 ```
 
-Dodatno, možemo predstaviti ove vrednosti preko grafika kako bismo imali još jasniji, vizuelni pregled korelacije između promenljivih.
-
-Možemo videti da promenljiva _rating_ ima korelaciju sa ostalim promenljivama čak 0.76, dok prediktori međusobno imaju oko 0.58. To je prihvatljivo.
+Vidimo da je maksimalna vrednost korelacije za dve promenljive 0.60 sto nije dovoljno da bismo ovo smatrali multikolinearnoscu.
 
 ```{r}
 
@@ -1633,6 +1640,7 @@ str(train)
 
 ## Binarna logistička regresija  
 
+Ovaj model treba da predvidi verovatnoću pripadnosti jednoj od dve klase. U našem slučaju, 1 je visoka ocena, a 0 niska.
 ```{r}
 
 glm_model <- glm(high_rating ~ camera_rating + display_rating + battery_life_rating +
@@ -1654,11 +1662,40 @@ glm_class <- factor(ifelse(glm_pred > 0.5, "True", "False"),
 str(validation)
 ```
 
+Vidimo da je ovaj model dosta precizan. 
 ```{r}
 cm_binary_output = confusionMatrix(glm_class, validation$high_rating)
 
 cm_binary_output
 ```
+
+Iz matrice konfuzije ćemo izvući vrednosti za _precision_ i _recall_ i na osnovu njih odraditi f1_score.
+Parametar _precision_ predstavlja koji procenat pozitivno predviđenih slučajeva je zaista pozitivan.
+Parametar _recall_ predstavlja koliki procenat stvarno pozitivnih slučajeva je model uspešno prepoznao.
+_f1_score_ se računa preko ove dve vrednosti i predstavlja harmonijsku sredinu _precision_-a i _recall_-a.
+
+```{r}
+precision = cm_binary_output$byClass["Precision"]
+recall = cm_binary_output$byClass["Recall"]
+
+f1_score = 2 * (precision * recall) / (precision + recall)
+
+f1_score
+```
+
+Predstavimo ROC krivu na grafiku.
+```{r}
+roc_value = roc(validation$high_rating, glm_pred)
+
+plot(roc_value, col = "tomato")
+
+```
+Sa grafika vidimo da je površina ispod ROC krive velika, ali izračunajmo AUC. Vidimo da je vrednost veoma blizu jedinici, što je odlično.
+```{r}
+auc_value = auc(roc_value)
+auc_value
+```
+
 <span style="color:red;">[Dodato]</span>  
 
 ## Upoređivanje modela kroz metrike  
@@ -1839,7 +1876,7 @@ Odradićemo jedan minimalni test kojim ćemo proveriti da li je sve ispravno pod
 
 ```{r}
 
-mlflow_set_experiment("Test_v1")
+mlflow_set_experiment("Test_v2.0")
 
 ```
 
@@ -1879,7 +1916,7 @@ Postupak je prilično pravolinijski:
 
 
 ```{r}
-mlflow_set_experiment("Global_Mobile_Reviews_Models_Exp_01")
+mlflow_set_experiment("Global_Mobile_Reviews_Models_Exp_2.0")
 ```
 
 Nakon sto smo pokrenuli eksperiment, slaćemo jedan po jedan model zajedno sa parametrima i metrikama u MLFlow.
